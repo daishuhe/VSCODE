@@ -207,7 +207,11 @@
   .overlay .skull { font-size: 64px; }
   .overlay h2 { font-size: 24px; letter-spacing: 3px; margin: 4px 0 8px; }
   .overlay .summary { font-size: 14.5px; opacity: .95; line-height: 1.9; }
-  .overlay .btn { background: #fff; color: var(--danger); box-shadow: none; }
+  .overlay .btn { background: #fff; color: var(--danger); box-shadow: none; width: min(300px, 100%); margin-top: 10px; }
+  .btn.gold { background: linear-gradient(135deg, #ffd166, #ff9f1c); color: #fff; box-shadow: 0 8px 18px rgba(255,159,28,.45); }
+  .btn.plain { background: #eee7db; color: #8d7b68; box-shadow: none; }
+  .btn.revive { animation: revivePulse 1.2s infinite; }
+  @keyframes revivePulse { 0%,100% { box-shadow: 0 8px 18px rgba(255,159,28,.45); } 50% { box-shadow: 0 8px 26px rgba(255,183,3,.85); transform: translateY(-2px); } }
   .hidden { display: none !important; }
 
   .shake { animation: shake .5s ease; }
@@ -300,6 +304,10 @@
         <div class="label"><span>💕 心情</span><span id="moodVal">100</span></div>
         <div class="bar"><i id="moodBar" style="width:100%;background:var(--good)"></i></div>
       </div>
+      <div class="stat">
+        <div class="label"><span>🧑 你的生命</span><span id="ownerHpVal">100</span></div>
+        <div class="bar"><i id="ownerHpBar" style="width:100%;background:var(--danger)"></i></div>
+      </div>
 
       <div class="actions">
         <button class="action-btn feed" id="feedBtn"><span class="ico">🍖</span>喂饭</button>
@@ -310,12 +318,22 @@
       <div class="log" id="log"></div>
     </div>
 
-    <!-- 死亡遮罩 -->
+    <!-- 宠物死亡遮罩（可充钱复活） -->
     <div class="overlay hidden" id="deadOverlay">
       <div class="skull">💀</div>
       <h2>宠物去世了</h2>
       <div class="summary" id="deadSummary"></div>
-      <button class="btn" id="restartBtn">回到商店</button>
+      <button class="btn gold revive" id="revivePetBtn">💎 充钱复活它</button>
+      <button class="btn plain" id="restartBtn">不救了，回商店再买一只</button>
+    </div>
+
+    <!-- 主人被打死遮罩（可充钱复活自己） -->
+    <div class="overlay hidden" id="ownerDeadOverlay">
+      <div class="skull">🤕</div>
+      <h2>你被宠物打死了！</h2>
+      <div class="summary" id="ownerDeadSummary"></div>
+      <button class="btn gold revive" id="reviveOwnerBtn">💎 复活自己</button>
+      <button class="btn plain" id="ownerGiveupBtn">认怂，回商店重来</button>
     </div>
 
     <!-- 充值中心 -->
@@ -366,6 +384,15 @@
     { emoji:'🐉', species:'小神龙', star:5, price:22800, desc:'上古神兽的后裔！', happy:'吼吼吼！', food:'🔥', water:'💧' },
   ];
 
+  // 宠物凶性（越高越爱打主人）：默认 1
+  const AGG = {
+    '🦎':1.5, '🐛':0.6, '🐭':1.0, '🦂':1.9, '🐸':0.7, '🐢':0.5, '🦔':1.2,
+    '🐹':0.8, '🐰':0.6, '🐧':0.6, '🐱':1.0, '🐶':1.1, '🦊':1.4, '🐨':0.7,
+    '🐼':0.8, '🦄':1.3, '🐉':1.7,
+  };
+  const aggOf = pet => (AGG[pet.emoji] || 1);
+  const reviveFeeOf = pet => (PET_REVIVE_FEE[pet.star] || 300);
+
   // VIP 等级：累计充值金额(分) 决定称号与商店折扣
   const VIP = [
     { fen: 0,      disc: 1,    name: '平民玩家', emoji: '🐤' },
@@ -391,6 +418,26 @@
   const ACT_DECAY = { fullness: 7, water: 6, mood: 6 }; // 每次照顾过后都会流逝
   const GAIN = { feed: 45, water: 45, care: 40 };
   const LOW = 25;           // 低于该值触发警告
+
+  // ===== 氪金向：高概率死亡 + 复活 =====
+  const OWNER_MAX_HP = 100;        // 主人的生命上限
+  const OWNER_REVIVE_FEE = 800;    // 复活自己（被宠物打死）的花费
+  const PET_REVIVE_FEE = { 1:300, 2:500, 3:800, 4:1200, 5:2000 }; // 复活宠物按颜值收费
+  const SUDDEN_CHANCE = 0.12;      // 每次照顾后宠物随机暴毙概率（很高！）
+  const SUDDEN_TICK = 0.006;       // 每3秒挂机时随机暴毙概率
+  const ATTACK_BASE = 0.12;        // 每次照顾被宠物攻击的基础概率（乘凶性）
+  const ATTACK_DMG_MIN = 20, ATTACK_DMG_MAX = 45;
+  const OWNER_REGEN = 1;           // 每3秒主人自动回血
+  const LOW_HP = 35;               // 主人血量低于此值告警
+  const SUDDEN_CAUSES = [
+    '突发心脏病，抢救无效',
+    '吃着吃着饭，被自己噎死了',
+    '睡梦中安详地……就没气了',
+    '看到主人的余额后，当场气绝身亡',
+    '得了一种叫“穷”的绝症，不治身亡',
+    '走楼梯踩空，摔了一跤就再没起来',
+    '半夜偷偷吃东西，把自己撑死了',
+  ];
 
   // ================= 存档 =================
   const LS = (k, d) => {
@@ -422,15 +469,19 @@
   const petList = $('petList'), selInfo = $('selInfo'), appEl = $('app');
   const coinVal = $('coinVal'), vipBadge = $('vipBadge'), vipLine = $('vipLine'), pkgGrid = $('pkgGrid');
   const toastEl = $('toast'), goRechargeBtn = $('goRechargeBtn');
+  const ownerHpBar = $('ownerHpBar'), ownerHpVal = $('ownerHpVal');
+  const ownerDeadOverlay = $('ownerDeadOverlay'), ownerDeadSummary = $('ownerDeadSummary');
+  const revivePetBtn = $('revivePetBtn'), reviveOwnerBtn = $('reviveOwnerBtn'), ownerGiveupBtn = $('ownerGiveupBtn');
 
   // ================= 全局状态 =================
   const state = {
     pet: PETS[0], name: '', age: 0,
     fullness: 100, water: 100, mood: 100,
     alive: false, cause: '', inGame: false,
+    ownerHp: 100, ownerAlive: true,
   };
   let selectedPet = null;      // 商店里选中的宠物
-  const warnFlags = { fullness: false, water: false, mood: false };
+  const warnFlags = { fullness: false, water: false, mood: false, ownerHp: false };
 
   // ================= 工具函数 =================
   const starsHTML = n =>
@@ -643,11 +694,13 @@
     state.fullness = 100; state.water = 100; state.mood = 100;
     state.alive = true; state.cause = '';
     state.inGame = true;
-    warnFlags.fullness = warnFlags.water = warnFlags.mood = false;
+    state.ownerHp = OWNER_MAX_HP; state.ownerAlive = true;
+    warnFlags.fullness = warnFlags.water = warnFlags.mood = warnFlags.ownerHp = false;
 
     adoptScreen.classList.add('hidden');
     gameScreen.classList.remove('hidden');
     deadOverlay.classList.add('hidden');
+    ownerDeadOverlay.classList.add('hidden');
     rechargeOverlay.classList.add('hidden');
     feedBtn.disabled = waterBtn.disabled = careBtn.disabled = false;
     petEmoji.className = 'pet-emoji';
@@ -655,7 +708,9 @@
     render();
     addLog('🎉 你花 🪙 ' + fmt(effPrice(pet)) + ' 领养了 ' + pet.species + '「' + state.name + '」，颜值 ' +
       '★'.repeat(pet.star) + '。一定要照顾好它！', 'happy');
-    addLog('📢 注意：饱食度 / 水分 / 心情，任何一个降到 0，它就会直接死亡！', 'warn');
+    addLog('📢 规则①：饱食度 / 水分 / 心情，任何一个降到 0，宠物直接死亡！', 'warn');
+    addLog('📢 规则②：宠物随时可能随机暴毙（概率很高）！也可能打主人，把主人打死！', 'warn');
+    addLog('💸 温馨提示：死亡都可以充钱复活～早充早安心。', 'warn');
   }
 
   // ================= 渲染 =================
@@ -669,6 +724,14 @@
     setBar(fullnessBar, fullnessVal, state.fullness);
     setBar(waterBar, waterVal, state.water);
     setBar(moodBar, moodVal, state.mood);
+    setOwnerBar(state.ownerHp);
+  }
+
+  function setOwnerBar(v) {
+    v = Math.max(0, Math.min(OWNER_MAX_HP, v));
+    ownerHpBar.style.width = v + '%';
+    ownerHpVal.textContent = Math.round(v);
+    ownerHpBar.classList.toggle('low', v <= LOW_HP);
   }
 
   // ================= 死亡判定：任一数值归零 → 直接死亡 =================
@@ -681,47 +744,138 @@
     return dead;
   }
 
-  function die() {
-    const dead = findCause();
-    if (!dead || !state.alive) return;
+  // ===== 宠物死亡 & 充钱复活 =====
+  function petDie(causeText) {
+    if (!state.alive) return;
     state.alive = false;
-    const text = {
-      饱食度: state.name + ' 被活活饿死了……（饱食度降到 0）',
-      水分: state.name + ' 渴得再也睁不开眼睛……（水分降到 0）',
-      心情: state.name + ' 孤单伤心到极点，安静地离开了……（心情降到 0）',
-    };
-    state.cause = dead.length > 1
-      ? dead.map(d => text[d]).join(' ')
-      : text[dead[0]];
-
+    state.cause = causeText;
     animate('dead');
     shake();
-    addLog('⚠️ ' + state.cause, 'warn');
-
+    addLog('⚠️ ' + causeText, 'warn');
     setTimeout(() => {
       $('deadSummary').innerHTML =
         '🐾 ' + state.pet.species + '「' + state.name + '」 · 颜值 ' +
         '<span class="star-f">' + '★'.repeat(state.pet.star) + '</span><br>' +
         '只活了 <b>' + state.age + '</b> 岁<br>' +
-        '☠️ 去世原因：' + state.cause;
+        '☠️ 去世原因：' + state.cause +
+        '<br><br>💸 复活它只需 <b style="color:#ffd166">🪙 ' + fmt(reviveFeeOf(state.pet)) +
+        '</b>，复活不了，就是没充够！';
+      revivePetBtn.textContent = '💎 充钱复活它（🪙 ' + fmt(reviveFeeOf(state.pet)) + '）';
       deadOverlay.classList.remove('hidden');
       feedBtn.disabled = waterBtn.disabled = careBtn.disabled = true;
     }, 900);
   }
 
+  // 数值归零导致的死亡
+  function die() {
+    const dead = findCause();
+    if (!dead || !state.alive) return;
+    const text = {
+      饱食度: state.name + ' 被活活饿死了……（饱食度降到 0）',
+      水分: state.name + ' 渴得再也睁不开眼睛……（水分降到 0）',
+      心情: state.name + ' 孤单伤心到极点，安静地离开了……（心情降到 0）',
+    };
+    petDie(dead.length > 1 ? dead.map(d => text[d]).join(' ') : text[dead[0]]);
+  }
+
+  // 高概率随机暴毙
+  function suddenPetDeath() {
+    const r = SUDDEN_CAUSES[Math.floor(Math.random() * SUDDEN_CAUSES.length)];
+    petDie(state.name + ' 突然暴毙：' + r + '（随机死亡概率 ' +
+      Math.round(SUDDEN_CHANCE * 100) + '%，下辈子记得充钱祈福）');
+  }
+
+  // 复活宠物
+  revivePetBtn.addEventListener('click', () => {
+    if (state.alive) return;
+    const fee = reviveFeeOf(state.pet);
+    if (coins < fee) {
+      toast('😿 复活需要 🪙 ' + fmt(fee) + '，你还差 🪙 ' + fmt(fee - coins) + '！');
+      openRecharge();
+      return;
+    }
+    coins -= fee;
+    save();
+    renderWallet();
+    state.alive = true;
+    state.fullness = 100; state.water = 100; state.mood = 100;
+    deadOverlay.classList.add('hidden');
+    feedBtn.disabled = waterBtn.disabled = careBtn.disabled = false;
+    petEmoji.className = 'pet-emoji';
+    render();
+    addLog('💸 你花了 🪙 ' + fmt(fee) + ' 把 ' + state.name + ' 从鬼门关拉回来了！它重获新生。', 'happy');
+    addLog('⚠️ 但它暴毙概率依然很高……建议趁早再充一笔保平安。', 'warn');
+  });
+
+  // ===== 宠物攻击主人 & 复活自己 =====
+  function attackOwner() {
+    const dmg = ATTACK_DMG_MIN + Math.floor(Math.random() * (ATTACK_DMG_MAX - ATTACK_DMG_MIN + 1));
+    const lines = [
+      '狠狠咬了你一口', '挥爪挠了你一下', '朝你飞起一记无影脚',
+      '一言不合对你动了手', '把你当成了沙袋练拳', '对你的钱包产生了敌意，先打你一顿',
+    ];
+    const line = lines[Math.floor(Math.random() * lines.length)];
+    state.ownerHp = Math.max(0, state.ownerHp - dmg);
+    render();
+    if (state.ownerHp <= 0) {
+      addLog('☠️ ' + state.pet.species + '「' + state.name + '」' + line + '，你失血过多倒下了！', 'warn');
+      ownerDie();
+    } else {
+      addLog('😾 ' + state.pet.species + '「' + state.name + '」' + line + '，你受到 ' + dmg +
+        ' 点伤害（剩余生命 ' + state.ownerHp + '）！建议买份“被宠物殴打包”。', 'warn');
+    }
+  }
+
+  function ownerDie() {
+    state.ownerAlive = false;
+    shake();
+    setTimeout(() => {
+      $('ownerDeadSummary').innerHTML =
+        '凶手：' + state.pet.emoji + ' ' + state.pet.species + '「' + state.name + '」<br>' +
+        '你辛辛苦苦伺候了它 <b>' + state.age + '</b> 岁，还是被它打死了。<br>' +
+        '🧾 复活费用 <b style="color:#ffd166">🪙 ' + fmt(OWNER_REVIVE_FEE) +
+        '</b>（含 38 针缝合手术费）。<br>没钱？那就乖乖去充值！';
+      reviveOwnerBtn.textContent = '💎 复活自己（🪙 ' + fmt(OWNER_REVIVE_FEE) + '）';
+      ownerDeadOverlay.classList.remove('hidden');
+      feedBtn.disabled = waterBtn.disabled = careBtn.disabled = true;
+    }, 700);
+  }
+
+  // 复活自己
+  reviveOwnerBtn.addEventListener('click', () => {
+    if (state.ownerAlive) return;
+    if (coins < OWNER_REVIVE_FEE) {
+      toast('😿 复活需要 🪙 ' + fmt(OWNER_REVIVE_FEE) + '，你还差 🪙 ' + fmt(OWNER_REVIVE_FEE - coins) + '！');
+      openRecharge();
+      return;
+    }
+    coins -= OWNER_REVIVE_FEE;
+    save();
+    renderWallet();
+    state.ownerHp = OWNER_MAX_HP;
+    state.ownerAlive = true;
+    warnFlags.ownerHp = false;
+    ownerDeadOverlay.classList.add('hidden');
+    feedBtn.disabled = waterBtn.disabled = careBtn.disabled = false;
+    render();
+    addLog('💸 你在医院缝了 38 针，花了 🪙 ' + fmt(OWNER_REVIVE_FEE) + ' 复活了。', 'happy');
+    addLog('😤 宠物在一旁冷眼旁观，仿佛在说：接着伺候本大爷。', 'warn');
+  });
+
   // ================= 低数值警告 =================
   function warnLow() {
     const list = [
-      ['fullness', '🍖 饱食度快见底了！再不喂饭 ' + state.name + ' 会饿死的！'],
-      ['water',    '💧 水分快见底了！再不喝水 ' + state.name + ' 会渴死的！'],
-      ['mood',     '💕 心情快见底了！多陪陪 ' + state.name + ' 吧，不然它会伤心而死！'],
+      ['fullness', LOW,    '🍖 饱食度快见底了！再不喂饭 ' + state.name + ' 会饿死的！'],
+      ['water',    LOW,    '💧 水分快见底了！再不喝水 ' + state.name + ' 会渴死的！'],
+      ['mood',     LOW,    '💕 心情快见底了！多陪陪 ' + state.name + ' 吧，不然它会伤心而死！'],
+      ['ownerHp',  LOW_HP, '🧑 你已经伤痕累累！宠物随时可能再打死你，还不充钱保命？'],
     ];
-    list.forEach(([key, msg]) => {
-      if (state[key] <= LOW && !warnFlags[key]) {
+    list.forEach(([key, th, msg]) => {
+      if (state[key] <= th && !warnFlags[key]) {
         warnFlags[key] = true;
         addLog('⚠️ ' + msg, 'warn');
         animate('sad');
-      } else if (state[key] > LOW && warnFlags[key]) {
+      } else if (state[key] > th && warnFlags[key]) {
         warnFlags[key] = false;
       }
     });
@@ -729,19 +883,23 @@
 
   // ================= 自然消耗（每 3 秒） =================
   function tick() {
-    if (!state.alive || !state.inGame) return;
-    state.fullness = Math.max(0, state.fullness - IDLE_DECAY);
-    state.water = Math.max(0, state.water - IDLE_DECAY);
-    state.mood = Math.max(0, state.mood - IDLE_DECAY);
+    if (!state.inGame || !state.ownerAlive) return;
+    if (state.alive) {
+      state.fullness = Math.max(0, state.fullness - IDLE_DECAY);
+      state.water = Math.max(0, state.water - IDLE_DECAY);
+      state.mood = Math.max(0, state.mood - IDLE_DECAY);
+    }
+    state.ownerHp = Math.min(OWNER_MAX_HP, state.ownerHp + OWNER_REGEN); // 主人慢慢回血
     render();
     warnLow();
-    die(); // 任一归零直接死亡
+    die(); // 任一归零 → 直接死亡
+    if (state.alive && Math.random() < SUDDEN_TICK) suddenPetDeath(); // 挂机也会随机暴毙
   }
   setInterval(tick, TICK_MS);
 
   // ================= 一次照顾操作 =================
   function act(type) {
-    if (!state.alive) return;
+    if (!state.alive || !state.ownerAlive) return;
     state.age += 1;   // 每照顾一次算度过一天
     let msg = '';
     animate('bounce');
@@ -767,14 +925,33 @@
       die();
       return;
     }
+
+    // 🎲 高概率随机暴毙（想活命？充钱！）
+    if (Math.random() < SUDDEN_CHANCE) {
+      suddenPetDeath();
+      return;
+    }
+
+    // 🎲 宠物攻击主人（凶性越高越爱打人）
+    const attackChance = Math.min(0.4, ATTACK_BASE * aggOf(state.pet));
+    if (Math.random() < attackChance) {
+      attackOwner();
+      if (!state.ownerAlive) return; // 主人已死，游戏结束
+    }
+
     warnLow();
     addLog(state.name + ' 长到了 ' + state.age + ' 岁。' + msg, 'happy');
   }
 
-  // ================= 回到商店 =================
-  $('restartBtn').addEventListener('click', () => {
+  // ================= 回到商店（不复活 = 认栽） =================
+  function goShop() {
     state.inGame = false;
+    state.alive = false;
+    state.ownerAlive = true;          // 换个新主人，满血重生
+    state.ownerHp = OWNER_MAX_HP;
+    warnFlags.fullness = warnFlags.water = warnFlags.mood = warnFlags.ownerHp = false;
     deadOverlay.classList.add('hidden');
+    ownerDeadOverlay.classList.add('hidden');
     gameScreen.classList.add('hidden');
     adoptScreen.classList.remove('hidden');
     logEl.innerHTML = '';
@@ -782,7 +959,10 @@
     selectedPet = null;
     checkAdoptReady();
     renderShop();
-  });
+    renderWallet();
+  }
+  $('restartBtn').addEventListener('click', goShop);
+  ownerGiveupBtn.addEventListener('click', goShop);
 
   // ================= 事件绑定 & 启动 =================
   feedBtn.addEventListener('click', () => act('feed'));
