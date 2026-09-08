@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>养宠物小游戏</title>
+<style>
+  :root {
+    --bg1: #ffe8d6;
+    --bg2: #ffd6e0;
+    --card: #fffaf3;
+    --ink: #5b4636;
+    --accent: #ff8fa3;
+    --accent2: #ffb703;
+    --good: #7ac74f;
+    --water: #4fc3f7;
+    --danger: #ef476f;
+    --gold: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, var(--bg1), var(--bg2));
+    color: var(--ink);
+    padding: 20px;
+  }
+  .app {
+    width: 100%;
+    max-width: 440px;
+    background: var(--card);
+    border-radius: 24px;
+    box-shadow: 0 20px 50px rgba(91, 70, 54, 0.2);
+    padding: 20px 24px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  h1 { font-size: 24px; margin-bottom: 4px; letter-spacing: 2px; }
+  .subtitle { font-size: 13px; color: #a08c7c; margin-bottom: 14px; }
+
+  /* ---- 顶栏：钱包 / VIP / 充值 ---- */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding-bottom: 10px; margin-bottom: 12px;
+    border-bottom: 2px dashed #f0e0cf;
+  }
+  .wallet {
+    display: flex; align-items: center; gap: 6px;
+    background: linear-gradient(135deg,#fff3d6,#ffe9c2);
+    border: 2px solid #ffd98a; border-radius: 30px;
+    padding: 5px 14px; font-weight: 800; font-size: 16px; color: #a06800;
+  }
+  .wallet .coin { font-size: 17px; }
+  .top-right { display: flex; align-items: center; gap: 6px; }
+  .vip-badge {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+    background: #eee7db; color: #8d7b68; white-space: nowrap;
+  }
+  .mini-btn {
+    border: none; cursor: pointer; font-weight: 700;
+    padding: 7px 14px; border-radius: 20px; color: #fff; font-size: 13px;
+    background: linear-gradient(135deg, #ffb703, #fb8500);
+    box-shadow: 0 4px 10px rgba(251,133,0,.35);
+    transition: transform .1s ease;
+    letter-spacing: 1px;
+  }
+  .mini-btn:hover { transform: translateY(-2px); }
+  .mini-btn:active { transform: translateY(0); }
+
+  /* ---- 宠物商店 ---- */
+  .shop { display: flex; flex-direction: column; gap: 12px; margin: 10px 0 4px; }
+  .tier-head { text-align: left; }
+  .tier-head .t1 { font-size: 13px; font-weight: 800; letter-spacing: 1px; }
+  .tier-head .t2 { font-size: 11px; color: #a08c7c; }
+  .tier-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+  .pcard {
+    position: relative;
+    border: 2px solid #eee4d8; border-radius: 14px; background: #fff;
+    cursor: pointer; padding: 8px 4px 7px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    transition: all .15s ease; user-select: none;
+  }
+  .pcard:hover { transform: translateY(-3px); box-shadow: 0 6px 14px rgba(0,0,0,.08); }
+  .pcard .p-emoji { font-size: 30px; line-height: 1.2; }
+  .pcard .p-name { font-size: 12px; font-weight: 700; }
+  .pcard .p-stars { font-size: 10px; letter-spacing: 1px; line-height: 1.2; }
+  .pcard .p-price { font-size: 11px; font-weight: 800; color: #b07400; }
+  .pcard .p-price .free { color: var(--good); }
+  .pcard .p-price s { color: #c9b8a8; font-weight: 500; margin-right: 3px; text-decoration-color: var(--danger); }
+  .pcard .lock {
+    position: absolute; top: 4px; right: 6px; font-size: 12px;
+    filter: none;
+  }
+  .pcard.locked { filter: grayscale(.9); opacity: .55; cursor: not-allowed; }
+  .pcard.locked:hover { transform: none; box-shadow: none; }
+  .pcard.selected {
+    border-color: var(--accent); background: #fff0f3;
+    box-shadow: 0 6px 16px rgba(255,143,163,.35); transform: translateY(-2px);
+  }
+  .star-f { color: var(--gold); }
+  .star-e { color: #dcd2c4; }
+
+  .sel-info {
+    margin: 12px 0 10px; font-size: 13px; min-height: 20px; color: #8a7664;
+    background: #faf1e6; border-radius: 12px; padding: 8px 12px;
+  }
+  .sel-info b { color: var(--ink); }
+
+  .name-input {
+    width: 100%; padding: 12px 16px; font-size: 16px;
+    border: 2px solid #eee4d8; border-radius: 14px; outline: none;
+    text-align: center; color: var(--ink); margin-top: 10px;
+  }
+  .name-input:focus { border-color: var(--accent); }
+
+  .btn {
+    display: inline-block; border: none; cursor: pointer;
+    padding: 13px 30px; font-size: 16px; font-weight: 600;
+    border-radius: 14px; letter-spacing: 2px; margin-top: 12px;
+    color: #fff; background: linear-gradient(135deg, var(--accent), #ff6f91);
+    box-shadow: 0 8px 18px rgba(255,111,145,.4);
+    transition: transform .1s ease, box-shadow .1s ease;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .link-btn {
+    display: block; margin: 10px auto 0; background: none; border: none;
+    color: #e07a2b; font-size: 13px; font-weight: 700; cursor: pointer;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .link-btn:hover { color: var(--danger); }
+
+  /* ---- 游戏主界面 ---- */
+  .pet-stage { margin: 8px 0 6px; position: relative; }
+  .pet-emoji {
+    font-size: 96px; line-height: 1;
+    display: inline-block;
+    transition: transform .2s ease;
+  }
+  .pet-emoji.bounce { animation: bounce .5s ease; }
+  @keyframes bounce {
+    0% { transform: translateY(0) scale(1); }
+    40% { transform: translateY(-18px) scale(1.08); }
+    100% { transform: translateY(0) scale(1); }
+  }
+  .pet-emoji.sad { animation: sad .6s ease; }
+  @keyframes sad { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px);} 75% { transform: translateX(6px);} }
+  .pet-emoji.dead { animation: dead .7s ease forwards; }
+  @keyframes dead { 0% { transform: rotate(0) scale(1);} 100% { transform: rotate(90deg) scale(.9); opacity:.7; } }
+
+  .pet-name { font-size: 20px; font-weight: 700; }
+  .beauty-line { font-size: 12.5px; margin-top: 3px; color: #8a7664; }
+  .beauty-line .stars { font-size: 14px; letter-spacing: 2px; vertical-align: middle; }
+  .pet-age { font-size: 13px; color: #a08c7c; margin-bottom: 10px; }
+  .age-big { color: var(--accent2); font-weight: 800; }
+
+  /* 状态条 */
+  .stat { text-align: left; margin: 9px 0; }
+  .stat .label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+  .bar { height: 12px; background: #f1e7da; border-radius: 8px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; border-radius: 8px; transition: width .4s ease; }
+  .bar > i.low { background: var(--danger) !important; animation: blinkbar .8s infinite; }
+  @keyframes blinkbar { 0%,100%{opacity:1;} 50%{opacity:.55;} }
+
+  /* 操作按钮 */
+  .actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+  .action-btn {
+    border: none; cursor: pointer; border-radius: 16px;
+    padding: 14px 6px; font-size: 14px; font-weight: 600; color: #fff;
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    transition: transform .1s ease; letter-spacing: 1px;
+  }
+  .action-btn:hover { transform: translateY(-3px); }
+  .action-btn:active { transform: translateY(0); }
+  .action-btn .ico { font-size: 24px; }
+  .feed { background: linear-gradient(135deg, #ffb703, #fb8500); box-shadow: 0 6px 14px rgba(251,133,0,.35); }
+  .water { background: linear-gradient(135deg, #4fc3f7, #2196f3); box-shadow: 0 6px 14px rgba(33,150,243,.35); }
+  .care { background: linear-gradient(135deg, #7ac74f, #55a630); box-shadow: 0 6px 14px rgba(85,166,48,.35); }
+  .action-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+  /* 日志 */
+  .log {
+    margin-top: 16px; text-align: left; font-size: 12.5px; color: #8a7664;
+    background: #faf1e6; border-radius: 14px; padding: 12px 14px;
+    height: 90px; overflow-y: auto; line-height: 1.7;
+  }
+  .log p { margin: 0; }
+  .log .warn { color: var(--danger); font-weight: 600; }
+  .log .happy { color: #55a630; }
+
+  /* 遮罩（死亡 / 充值） */
+  .overlay {
+    position: absolute; inset: 0; z-index: 20;
+    background: rgba(50,30,30,.72);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    color: #fff; padding: 26px 22px;
+    animation: fadein .35s ease;
+    overflow-y: auto;
+  }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  .overlay .skull { font-size: 64px; }
+  .overlay h2 { font-size: 24px; letter-spacing: 3px; margin: 4px 0 8px; }
+  .overlay .summary { font-size: 14.5px; opacity: .95; line-height: 1.9; }
+  .overlay .btn { background: #fff; color: var(--danger); box-shadow: none; }
+  .hidden { display: none !important; }
+
+  .shake { animation: shake .5s ease; }
+  @keyframes shake { 0%,100%{transform:translateX(0);}20%{transform:translateX(-8px);}40%{transform:translateX(8px);}60%{transform:translateX(-6px);}80%{transform:translateX(6px);} }
+
+  /* ---- 充值中心 ---- */
+  .recharge-overlay { background: linear-gradient(180deg, rgba(66,40,20,.9), rgba(120,50,70,.88)); justify-content: flex-start; }
+  .rc-title { font-size: 22px; letter-spacing: 2px; margin-bottom: 2px; }
+  .rc-note { font-size: 12px; opacity: .8; margin-bottom: 10px; }
+  .vip-line {
+    width: 100%; background: rgba(255,255,255,.12); border-radius: 12px;
+    padding: 8px 12px; font-size: 12.5px; margin-bottom: 12px; line-height: 1.8;
+  }
+  .vip-line .v-now { font-weight: 800; }
+  .vip-progress { height: 7px; background: rgba(255,255,255,.2); border-radius: 6px; overflow: hidden; margin-top: 5px; }
+  .vip-progress > i { display: block; height: 100%; background: linear-gradient(90deg,#ffd166,#ffb703,#fb8500); border-radius: 6px; transition: width .4s; }
+  .pkg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+  .pkg {
+    background: rgba(255,255,255,.14); border: 2px solid rgba(255,255,255,.25);
+    border-radius: 14px; padding: 10px 8px; cursor: pointer;
+    transition: all .15s ease; text-align: center;
+  }
+  .pkg:hover { background: rgba(255,255,255,.24); transform: translateY(-3px); border-color: #ffd166; }
+  .pkg.hot { border-color: #ffd166; background: linear-gradient(135deg, rgba(255,183,3,.35), rgba(251,133,0,.35)); }
+  .pkg .p-rmb { font-size: 18px; font-weight: 900; letter-spacing: 1px; }
+  .pkg .p-rmb small { font-size: 12px; font-weight: 700; }
+  .pkg .p-gain { font-size: 13px; color: #ffe9b0; font-weight: 700; margin-top: 2px; }
+  .pkg .p-tag { font-size: 10px; margin-top: 3px; background: rgba(239,71,111,.9); color:#fff; border-radius: 8px; padding: 1px 7px; display: inline-block; }
+  .pkg .p-tag.goldtag { background: rgba(255,183,3,.9); color: #7a4b00; }
+  .rc-close {
+    margin-top: 14px; border: none; cursor: pointer;
+    background: rgba(255,255,255,.18); color: #fff; font-weight: 700;
+    padding: 9px 30px; border-radius: 20px; font-size: 14px; letter-spacing: 2px;
+  }
+  .rc-close:hover { background: rgba(255,255,255,.32); }
+
+  /* 提示 */
+  .toast {
+    position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%) translateY(8px);
+    background: rgba(43,33,24,.92); color: #fff; font-size: 13px; font-weight: 600;
+    padding: 9px 18px; border-radius: 24px; z-index: 50; opacity: 0; pointer-events: none;
+    transition: all .25s ease; max-width: 90%; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- 顶栏：钱包 / VIP / 充值 -->
+    <div class="topbar">
+      <div class="wallet"><span class="coin">🪙</span><span id="coinVal">1,000</span></div>
+      <div class="top-right">
+        <span class="vip-badge" id="vipBadge">🐤 平民玩家</span>
+        <button class="mini-btn" id="rechargeBtn">💎 充值</button>
+      </div>
+    </div>
+
+    <!-- 宠物商店（领养界面） -->
+    <div id="adoptScreen">
+      <h1>🐾 宠物商店</h1>
+      <p class="subtitle">颜值越高越贵，钱包不鼓就只能领养丑萌的啦～</p>
+
+      <div class="shop" id="petList"></div>
+
+      <div class="sel-info" id="selInfo">点上面的宠物看看～（先充钱才能买好看的！）</div>
+
+      <input class="name-input" id="nameInput" placeholder="给它起个名字（如：团团）" maxlength="8">
+      <button class="btn" id="adoptBtn" disabled>领 养</button>
+      <button class="link-btn hidden" id="goRechargeBtn">金币不够？💎 点我去充值</button>
+    </div>
+
+    <!-- 游戏主界面 -->
+    <div id="gameScreen" class="hidden">
+      <div class="pet-stage">
+        <div class="pet-emoji" id="petEmoji">🐱</div>
+      </div>
+      <div class="pet-name" id="petName">团团</div>
+      <div class="beauty-line" id="beautyLine"></div>
+      <div class="pet-age">年龄 <span class="age-big" id="petAge">0</span> 岁</div>
+
+      <div class="stat">
+        <div class="label"><span>🍖 饱食度</span><span id="fullnessVal">100</span></div>
+        <div class="bar"><i id="fullnessBar" style="width:100%;background:var(--accent2)"></i></div>
+      </div>
+      <div class="stat">
+        <div class="label"><span>💧 水分</span><span id="waterVal">100</span></div>
+        <div class="bar"><i id="waterBar" style="width:100%;background:var(--water)"></i></div>
+      </div>
+      <div class="stat">
+        <div class="label"><span>💕 心情</span><span id="moodVal">100</span></div>
+        <div class="bar"><i id="moodBar" style="width:100%;background:var(--good)"></i></div>
+      </div>
+
+      <div class="actions">
+        <button class="action-btn feed" id="feedBtn"><span class="ico">🍖</span>喂饭</button>
+        <button class="action-btn water" id="waterBtn"><span class="ico">💧</span>喝水</button>
+        <button class="action-btn care" id="careBtn"><span class="ico">🛁</span>照顾</button>
+      </div>
+
+      <div class="log" id="log"></div>
+    </div>
+
+    <!-- 死亡遮罩 -->
+    <div class="overlay hidden" id="deadOverlay">
+      <div class="skull">💀</div>
+      <h2>宠物去世了</h2>
+      <div class="summary" id="deadSummary"></div>
+      <button class="btn" id="restartBtn">回到商店</button>
+    </div>
+
+    <!-- 充值中心 -->
+    <div class="overlay recharge-overlay hidden" id="rechargeOverlay">
+      <div class="rc-title">💎 充值中心</div>
+      <div class="rc-note">（本地模拟充值 · 点击立即到账，不会真实扣款）</div>
+      <div class="vip-line" id="vipLine"></div>
+      <div class="pkg-grid" id="pkgGrid"></div>
+      <button class="rc-close" id="rcCloseBtn">收 起</button>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+
+<script>
+(() => {
+  // ================= 数据 =================
+  // 宠物列表：star = 颜值(1丑 ~ 5珍稀)，price 越高越好看越贵
+  const TIER = {
+    1: { title: '丑萌区 · 灰头土脸', tip: '便宜是便宜，就是有点丑……' },
+    2: { title: '普通区 · 路人甲乙', tip: '价格实在，长得一般' },
+    3: { title: '可爱区 · 小有人气', tip: '稍微有点小贵哦' },
+    4: { title: '漂亮区 · 颜值担当', tip: '好看是真的，贵也是真的' },
+    5: { title: '珍稀区 · 神兽降临', tip: '传说中的存在，钱包地狱' },
+  };
+  const PETS = [
+    // ★1 丑萌
+    { emoji:'🦎', species:'小壁虎', star:1, price:0,    desc:'灰扑扑的小家伙', happy:'嘶~嘶~', food:'🦟', water:'💧' },
+    { emoji:'🐛', species:'毛毛虫', star:1, price:200,  desc:'软乎乎的小吃货', happy:'啃啃啃~', food:'🍃', water:'💧' },
+    { emoji:'🐭', species:'小老鼠', star:1, price:400,  desc:'灰不溜秋爱偷吃', happy:'吱吱吱！', food:'🍚', water:'💧' },
+    { emoji:'🦂', species:'小蝎子', star:1, price:600,  desc:'看起来不太好惹', happy:'咔嚓咔嚓！', food:'🕷️', water:'💧' },
+    // ★2 普通
+    { emoji:'🐸', species:'小青蛙', star:2, price:800,  desc:'绿油油的小歌星', happy:'呱呱呱~', food:'🪰', water:'💧' },
+    { emoji:'🐢', species:'小乌龟', star:2, price:1000, desc:'慢吞吞的伙伴', happy:'慢~慢~来~', food:'🥬', water:'💧' },
+    { emoji:'🦔', species:'小刺猬', star:2, price:1400, desc:'有点扎手但真诚', happy:'哼哼哼~', food:'🍓', water:'💧' },
+    // ★3 可爱
+    { emoji:'🐹', species:'小仓鼠', star:3, price:1800, desc:'腮帮子鼓鼓的', happy:'吱吱~', food:'🌻', water:'💧' },
+    { emoji:'🐰', species:'小兔子', star:3, price:2400, desc:'毛茸茸的长耳朵', happy:'咕咕咕~', food:'🥕', water:'💧' },
+    { emoji:'🐧', species:'小企鹅', star:3, price:3000, desc:'摇摇晃晃的小绅士', happy:'啾啾啾~', food:'🐟', water:'💧' },
+    // ★4 漂亮
+    { emoji:'🐱', species:'小猫咪', star:4, price:4000, desc:'优雅高傲的喵星人', happy:'喵呜~', food:'🐟', water:'🥛' },
+    { emoji:'🐶', species:'小奶狗', star:4, price:5000, desc:'忠诚黏人的毛孩子', happy:'汪汪！', food:'🍖', water:'💧' },
+    { emoji:'🦊', species:'小狐狸', star:4, price:6200, desc:'机灵的小妖精', happy:'嘤嘤嘤~', food:'🍇', water:'💧' },
+    { emoji:'🐨', species:'小考拉', star:4, price:7600, desc:'整天要抱抱的树袋熊', happy:'呜呜呜~', food:'🍃', water:'💧' },
+    // ★5 珍稀
+    { emoji:'🐼', species:'大熊猫', star:5, price:12800, desc:'国宝级萌物！', happy:'嗯嗯嗯~', food:'🎋', water:'💧' },
+    { emoji:'🦄', species:'独角兽', star:5, price:16800, desc:'传说中会飞的精灵', happy:'叮铃铃~', food:'🌈', water:'✨' },
+    { emoji:'🐉', species:'小神龙', star:5, price:22800, desc:'上古神兽的后裔！', happy:'吼吼吼！', food:'🔥', water:'💧' },
+  ];
+
+  // VIP 等级：累计充值金额(分) 决定称号与商店折扣
+  const VIP = [
+    { fen: 0,      disc: 1,    name: '平民玩家', emoji: '🐤' },
+    { fen: 3000,   disc: 0.9,  name: '青铜贵族', emoji: '🥉' },
+    { fen: 12800,  disc: 0.85, name: '白银贵族', emoji: '🥈' },
+    { fen: 32800,  disc: 0.8,  name: '黄金贵族', emoji: '🥇' },
+    { fen: 64800,  disc: 0.7,  name: '至尊神豪', emoji: '👑' },
+  ];
+
+  // 充值套餐
+  const RECHARGE = [
+    { rmb: 6,   coins: 600,  tag: '新手礼包',  hot: false },
+    { rmb: 30,  coins: 3600, tag: '',          hot: true  },
+    { rmb: 68,  coins: 8800, tag: '性价比之选', hot: true  },
+    { rmb: 128, coins: 18800, tag: '热卖',      hot: false },
+    { rmb: 328, coins: 42800, tag: '送VIP',     hot: false },
+    { rmb: 648, coins: 88800, tag: '一步到位',  hot: false },
+  ];
+
+  const START_COINS = 1000; // 新手礼包
+  const TICK_MS = 3000;     // 每隔3秒自然消耗一次
+  const IDLE_DECAY = 1;     // 每次自然消耗 -1
+  const ACT_DECAY = { fullness: 7, water: 6, mood: 6 }; // 每次照顾过后都会流逝
+  const GAIN = { feed: 45, water: 45, care: 40 };
+  const LOW = 25;           // 低于该值触发警告
+
+  // ================= 存档 =================
+  const LS = (k, d) => {
+    const v = localStorage.getItem('pet_mini.' + k);
+    return v === null ? d : +v;
+  };
+  let coins = LS('coins', START_COINS);
+  let rechargeFen = LS('rechargeFen', 0);   // 累计充值（分）
+  let hasRecharged = LS('hasRecharged', 0) === 1;
+  function save() {
+    localStorage.setItem('pet_mini.coins', coins);
+    localStorage.setItem('pet_mini.rechargeFen', rechargeFen);
+    localStorage.setItem('pet_mini.hasRecharged', hasRecharged ? 1 : 0);
+  }
+  const myVIP = () => VIP.reduce((a, b) => (rechargeFen >= b.fen ? b : a), VIP[0]);
+  const nextVIP = () => VIP.find(v => v.fen > rechargeFen) || null;
+  const effPrice = pet => Math.ceil(pet.price * myVIP().disc); // 折扣后价格
+  const fmt = n => n.toLocaleString('zh-CN');
+
+  // ================= DOM =================
+  const $ = id => document.getElementById(id);
+  const adoptScreen = $('adoptScreen'), gameScreen = $('gameScreen');
+  const deadOverlay = $('deadOverlay'), rechargeOverlay = $('rechargeOverlay');
+  const petEmoji = $('petEmoji'), petName = $('petName'), petAge = $('petAge'), beautyLine = $('beautyLine');
+  const fullnessBar = $('fullnessBar'), waterBar = $('waterBar'), moodBar = $('moodBar');
+  const fullnessVal = $('fullnessVal'), waterVal = $('waterVal'), moodVal = $('moodVal');
+  const feedBtn = $('feedBtn'), waterBtn = $('waterBtn'), careBtn = $('careBtn');
+  const logEl = $('log'), adoptBtn = $('adoptBtn'), nameInput = $('nameInput');
+  const petList = $('petList'), selInfo = $('selInfo'), appEl = $('app');
+  const coinVal = $('coinVal'), vipBadge = $('vipBadge'), vipLine = $('vipLine'), pkgGrid = $('pkgGrid');
+  const toastEl = $('toast'), goRechargeBtn = $('goRechargeBtn');
+
+  // ================= 全局状态 =================
+  const state = {
+    pet: PETS[0], name: '', age: 0,
+    fullness: 100, water: 100, mood: 100,
+    alive: false, cause: '', inGame: false,
+  };
+  let selectedPet = null;      // 商店里选中的宠物
+  const warnFlags = { fullness: false, water: false, mood: false };
+
+  // ================= 工具函数 =================
+  const starsHTML = n =>
+    '<span class="star-f">' + '★'.repeat(n) + '</span>' +
+    '<span class="star-e">' + '☆'.repeat(5 - n) + '</span>';
+
+  let toastTimer = null;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+  }
+
+  function addLog(msg, cls) {
+    const p = document.createElement('p');
+    if (cls) p.className = cls;
+    p.textContent = msg;
+    logEl.prepend(p);
+    while (logEl.children.length > 30) logEl.removeChild(logEl.lastChild);
+  }
+
+  function animate(cls) {
+    petEmoji.classList.remove('bounce', 'sad', 'dead');
+    void petEmoji.offsetWidth;
+    petEmoji.classList.add(cls);
+  }
+
+  function shake() {
+    appEl.classList.remove('shake');
+    void appEl.offsetWidth;
+    appEl.classList.add('shake');
+    setTimeout(() => appEl.classList.remove('shake'), 500);
+  }
+
+  function setBar(bar, valEl, value) {
+    value = Math.max(0, Math.min(100, value));
+    bar.style.width = value + '%';
+    valEl.textContent = Math.round(value);
+    bar.classList.toggle('low', value <= LOW);
+  }
+
+  function renderWallet() {
+    coinVal.textContent = fmt(coins);
+    vipBadge.innerHTML = myVIP().emoji + ' ' + myVIP().name;
+  }
+
+  // ================= 商店渲染 =================
+  function renderShop() {
+    petList.innerHTML = '';
+    let cur = 0;
+    PETS.forEach(pet => {
+      if (pet.star > cur) {
+        cur = pet.star;
+        const head = document.createElement('div');
+        head.className = 'tier-head';
+        head.innerHTML =
+          '<div class="t1">' + starsHTML(cur) + '  ' + TIER[cur].title + '</div>' +
+          '<div class="t2">' + TIER[cur].tip + '</div>';
+        petList.appendChild(head);
+        const row = document.createElement('div');
+        row.className = 'tier-row';
+        row.dataset.tier = cur;
+        petList.appendChild(row);
+      }
+      const price = effPrice(pet);
+      const locked = coins < price;
+      const card = document.createElement('div');
+      card.className = 'pcard' + (locked ? ' locked' : '') + (selectedPet === pet ? ' selected' : '');
+      card.dataset.idx = PETS.indexOf(pet);
+      const priceHTML = price === 0
+        ? '<span class="free">免费</span>'
+        : (myVIP().disc < 1 ? '<s>🪙' + fmt(pet.price) + '</s> ' : '') + '🪙' + fmt(price);
+      card.innerHTML =
+        (locked ? '<span class="lock">🔒</span>' : '') +
+        '<div class="p-emoji">' + pet.emoji + '</div>' +
+        '<div class="p-name">' + pet.species + '</div>' +
+        '<div class="p-stars">' + starsHTML(pet.star) + '</div>' +
+        '<div class="p-price">' + priceHTML + '</div>';
+      petList.querySelector('.tier-row[data-tier="' + cur + '"]').appendChild(card);
+    });
+    updateSelInfo();
+  }
+
+  function updateSelInfo() {
+    if (!selectedPet) {
+      selInfo.innerHTML = '点上面的宠物看看～（先充钱才能买好看的！）';
+      goRechargeBtn.classList.add('hidden');
+      checkAdoptReady();
+      return;
+    }
+    const price = effPrice(selectedPet);
+    const rich = coins >= price;
+    selInfo.innerHTML =
+      '已选：<b>' + selectedPet.emoji + ' ' + selectedPet.species + '</b>（颜值 ' +
+      '<span class="star-f">' + '★'.repeat(selectedPet.star) + '</span>' +
+      '<span class="star-e">' + '☆'.repeat(5 - selectedPet.star) + '</span>' + '）· ' +
+      (price === 0 ? '<b class="free" style="color:var(--good)">免费</b>'
+                   : '售价 <b style="color:#b07400">🪙 ' + fmt(price) + '</b>') +
+      (rich ? ' ✅' : '<br>😿 你的金币只有 <b>' + fmt(coins) + '</b>，不够买它……先去充值吧！');
+    goRechargeBtn.classList.toggle('hidden', rich || !selectedPet);
+    checkAdoptReady();
+  }
+
+  function checkAdoptReady() {
+    const ok = selectedPet && nameInput.value.trim() && coins >= effPrice(selectedPet);
+    adoptBtn.disabled = !ok;
+    adoptBtn.textContent = selectedPet && coins < effPrice(selectedPet)
+      ? '金 币 不 足' : '领 养';
+  }
+
+  // 商店点击（事件委托）
+  petList.addEventListener('click', e => {
+    const card = e.target.closest('.pcard');
+    if (!card) return;
+    const pet = PETS[+card.dataset.idx];
+    if (coins < effPrice(pet)) {
+      shake();
+      toast('😿 金币不足，先去充值吧！');
+      openRecharge();
+      return;
+    }
+    selectedPet = pet;
+    document.querySelectorAll('.pcard').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    updateSelInfo();
+  });
+
+  nameInput.addEventListener('input', checkAdoptReady);
+  goRechargeBtn.addEventListener('click', openRecharge);
+
+  // ================= 充值 =================
+  function openRecharge() {
+    renderVipLine();
+    rechargeOverlay.classList.remove('hidden');
+  }
+  $('rcCloseBtn').addEventListener('click', () => rechargeOverlay.classList.add('hidden'));
+  $('rechargeBtn').addEventListener('click', openRecharge);
+
+  function renderVipLine() {
+    const v = myVIP(), n = nextVIP();
+    let html = '当前：<span class="v-now">' + v.emoji + ' ' + v.name + '</span>' +
+      (v.disc < 1 ? '（商店宠物 ' + Math.round(v.disc * 10) + ' 折）' : '') +
+      ' · 累计充值 ¥' + (rechargeFen / 100);
+    if (n) {
+      const done = rechargeFen - v.fen, total = n.fen - v.fen;
+      const pct = Math.min(100, Math.round(done / total * 100));
+      html += '<div class="vip-progress"><i style="width:' + pct + '%"></i></div>' +
+        '再充 <b>¥' + ((n.fen - rechargeFen) / 100) + '</b> 升级为 <b>' + n.emoji + ' ' + n.name + '</b>' +
+        (n.disc < 1 ? '（' + Math.round(n.disc * 10) + ' 折）' : '');
+    } else {
+      html += ' <span style="color:#ffe9b0">（已满级 👑）</span>';
+    }
+    vipLine.innerHTML = html;
+  }
+
+  function renderPkgs() {
+    pkgGrid.innerHTML = '';
+    RECHARGE.forEach(p => {
+      const double = !hasRecharged;
+      const gain = double ? p.coins * 2 : p.coins;
+      const el = document.createElement('div');
+      el.className = 'pkg' + (p.hot ? ' hot' : '');
+      el.innerHTML =
+        '<div class="p-rmb">¥' + p.rmb + '<small> 元</small></div>' +
+        '<div class="p-gain">🪙 +' + fmt(gain) + '</div>' +
+        (double ? '<div class="p-tag goldtag">🔥首充双倍</div>'
+                : p.tag ? '<div class="p-tag">' + p.tag + '</div>' : '');
+      el.addEventListener('click', () => buy(p));
+      pkgGrid.appendChild(el);
+    });
+  }
+
+  function buy(p) {
+    const double = !hasRecharged;
+    let gain = p.coins;
+    if (double) { gain *= 2; hasRecharged = true; }
+    const oldVIP = myVIP();
+    rechargeFen += p.rmb * 100;
+    coins += gain;
+    save();
+    renderWallet();
+    renderShop();           // 刷新锁定状态 / 折扣价
+    renderPkgs();           // 刷新"首充双倍"标记
+    renderVipLine();
+    const newVIP = myVIP();
+    const q = ['💎 充值成功，+🪙 ' + fmt(gain) + (double ? '（首充双倍！）' : '')];
+    if (newVIP !== oldVIP) {
+      q.push('👑 恭喜升级为 ' + newVIP.emoji + newVIP.name + '！商店宠物' +
+        (newVIP.disc < 1 ? ' ' + Math.round(newVIP.disc * 10) + ' 折' : ''));
+      q.push('🎉 快回商店挑一只更好看的宠物吧！');
+    }
+    q.forEach((m, i) => setTimeout(() => toast(m), i * 2300));
+  }
+  renderPkgs();
+
+  // ================= 领养 / 开局 =================
+  adoptBtn.addEventListener('click', () => {
+    if (!selectedPet || coins < effPrice(selectedPet)) { openRecharge(); return; }
+    coins -= effPrice(selectedPet);
+    save();
+    renderWallet();
+    startGame(selectedPet);
+  });
+
+  function startGame(pet) {
+    state.pet = pet;
+    state.name = nameInput.value.trim();
+    state.age = 0;
+    state.fullness = 100; state.water = 100; state.mood = 100;
+    state.alive = true; state.cause = '';
+    state.inGame = true;
+    warnFlags.fullness = warnFlags.water = warnFlags.mood = false;
+
+    adoptScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    deadOverlay.classList.add('hidden');
+    rechargeOverlay.classList.add('hidden');
+    feedBtn.disabled = waterBtn.disabled = careBtn.disabled = false;
+    petEmoji.className = 'pet-emoji';
+
+    render();
+    addLog('🎉 你花 🪙 ' + fmt(effPrice(pet)) + ' 领养了 ' + pet.species + '「' + state.name + '」，颜值 ' +
+      '★'.repeat(pet.star) + '。一定要照顾好它！', 'happy');
+    addLog('📢 注意：饱食度 / 水分 / 心情，任何一个降到 0，它就会直接死亡！', 'warn');
+  }
+
+  // ================= 渲染 =================
+  function render() {
+    petEmoji.textContent = state.pet.emoji;
+    petName.textContent = state.name;
+    petAge.textContent = state.age;
+    beautyLine.innerHTML =
+      state.pet.species + ' · ' + state.pet.desc + '<br>颜值 <span class="stars">' +
+      starsHTML(state.pet.star) + '</span>';
+    setBar(fullnessBar, fullnessVal, state.fullness);
+    setBar(waterBar, waterVal, state.water);
+    setBar(moodBar, moodVal, state.mood);
+  }
+
+  // ================= 死亡判定：任一数值归零 → 直接死亡 =================
+  function findCause() {
+    const dead = [];
+    if (state.fullness <= 0) dead.push('饱食度');
+    if (state.water <= 0) dead.push('水分');
+    if (state.mood <= 0) dead.push('心情');
+    if (!dead.length) return null;
+    return dead;
+  }
+
+  function die() {
+    const dead = findCause();
+    if (!dead || !state.alive) return;
+    state.alive = false;
+    const text = {
+      饱食度: state.name + ' 被活活饿死了……（饱食度降到 0）',
+      水分: state.name + ' 渴得再也睁不开眼睛……（水分降到 0）',
+      心情: state.name + ' 孤单伤心到极点，安静地离开了……（心情降到 0）',
+    };
+    state.cause = dead.length > 1
+      ? dead.map(d => text[d]).join(' ')
+      : text[dead[0]];
+
+    animate('dead');
+    shake();
+    addLog('⚠️ ' + state.cause, 'warn');
+
+    setTimeout(() => {
+      $('deadSummary').innerHTML =
+        '🐾 ' + state.pet.species + '「' + state.name + '」 · 颜值 ' +
+        '<span class="star-f">' + '★'.repeat(state.pet.star) + '</span><br>' +
+        '只活了 <b>' + state.age + '</b> 岁<br>' +
+        '☠️ 去世原因：' + state.cause;
+      deadOverlay.classList.remove('hidden');
+      feedBtn.disabled = waterBtn.disabled = careBtn.disabled = true;
+    }, 900);
+  }
+
+  // ================= 低数值警告 =================
+  function warnLow() {
+    const list = [
+      ['fullness', '🍖 饱食度快见底了！再不喂饭 ' + state.name + ' 会饿死的！'],
+      ['water',    '💧 水分快见底了！再不喝水 ' + state.name + ' 会渴死的！'],
+      ['mood',     '💕 心情快见底了！多陪陪 ' + state.name + ' 吧，不然它会伤心而死！'],
+    ];
+    list.forEach(([key, msg]) => {
+      if (state[key] <= LOW && !warnFlags[key]) {
+        warnFlags[key] = true;
+        addLog('⚠️ ' + msg, 'warn');
+        animate('sad');
+      } else if (state[key] > LOW && warnFlags[key]) {
+        warnFlags[key] = false;
+      }
+    });
+  }
+
+  // ================= 自然消耗（每 3 秒） =================
+  function tick() {
+    if (!state.alive || !state.inGame) return;
+    state.fullness = Math.max(0, state.fullness - IDLE_DECAY);
+    state.water = Math.max(0, state.water - IDLE_DECAY);
+    state.mood = Math.max(0, state.mood - IDLE_DECAY);
+    render();
+    warnLow();
+    die(); // 任一归零直接死亡
+  }
+  setInterval(tick, TICK_MS);
+
+  // ================= 一次照顾操作 =================
+  function act(type) {
+    if (!state.alive) return;
+    state.age += 1;   // 每照顾一次算度过一天
+    let msg = '';
+    animate('bounce');
+
+    if (type === 'feed') {
+      state.fullness = Math.min(100, state.fullness + GAIN.feed);
+      msg = state.name + ' 吃了 ' + state.pet.food + '，开心得直打滚，饱食度 +' + GAIN.feed;
+    } else if (type === 'water') {
+      state.water = Math.min(100, state.water + GAIN.water);
+      msg = state.name + ' 咕咚咕咚喝饱了水，水分 +' + GAIN.water;
+    } else if (type === 'care') {
+      state.mood = Math.min(100, state.mood + GAIN.care);
+      msg = '你陪 ' + state.name + ' 玩耍、梳毛、说悄悄话，心情 +' + GAIN.care;
+    }
+
+    // 一天的流逝：各项数值自然下降
+    state.fullness = Math.max(0, state.fullness - ACT_DECAY.fullness);
+    state.water = Math.max(0, state.water - ACT_DECAY.water);
+    state.mood = Math.max(0, state.mood - ACT_DECAY.mood);
+
+    render();
+    if (findCause()) { // 数值降到 0 → 直接死亡
+      die();
+      return;
+    }
+    warnLow();
+    addLog(state.name + ' 长到了 ' + state.age + ' 岁。' + msg, 'happy');
+  }
+
+  // ================= 回到商店 =================
+  $('restartBtn').addEventListener('click', () => {
+    state.inGame = false;
+    deadOverlay.classList.add('hidden');
+    gameScreen.classList.add('hidden');
+    adoptScreen.classList.remove('hidden');
+    logEl.innerHTML = '';
+    nameInput.value = '';
+    selectedPet = null;
+    checkAdoptReady();
+    renderShop();
+  });
+
+  // ================= 事件绑定 & 启动 =================
+  feedBtn.addEventListener('click', () => act('feed'));
+  waterBtn.addEventListener('click', () => act('water'));
+  careBtn.addEventListener('click', () => act('care'));
+
+  renderWallet();
+  renderShop();
+})();
+</script>
+</body>
+</html>
