@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>俄罗斯方块 Tetris</title>
+<title>富豪版俄罗斯方块 Tetris · 充钱才能玩</title>
 <style>
   :root {
     --bg: #0f1123;
@@ -112,6 +112,47 @@
   #overlay h1 { font-size: 40px; letter-spacing: 4px; }
   #overlay p { color: #b9bef0; font-size: 16px; }
   #overlay .big { font-size: 26px; color: #ffd54f; font-weight: 700; }
+
+  /* ---------- VIP 商店 / 充值 / toast ---------- */
+  .coin-box { font-size: 18px; font-weight: 700; color: #ffd54f; }
+  .vip-badge { display: inline-block; margin-top: 8px; background: linear-gradient(135deg,#ffd54f,#ff9f43); color:#3a2c00; border-radius: 20px; padding: 3px 12px; font-size: 11px; font-weight: 700; letter-spacing: 1px; box-shadow: 0 0 12px rgba(255,213,79,.4); }
+  .overlay2 { position: fixed; inset: 0; background: rgba(10,12,30,.72); display: none; align-items: center; justify-content: center; z-index: 20; }
+  .overlay2.show { display: flex; }
+  .shop-card { width: min(430px, 94vw); max-height: 88vh; overflow-y: auto; background: var(--panel); border: 1px solid var(--accent); border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 0 60px rgba(124,92,255,.45); }
+  .shop-title { font-size: 20px; font-weight: 800; letter-spacing: 2px; background: linear-gradient(135deg,#ffd54f,#ff9f43); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .shop-head { display: flex; justify-content: space-between; align-items: center; }
+  .x { background: none; border: none; color: #9aa0d8; font-size: 16px; min-width: 34px; padding: 6px; }
+  .tabs { display: flex; gap: 8px; margin: 12px 0 10px; }
+  .tab { flex: 1; padding: 9px 4px; font-size: 14px; border-radius: 9px; min-width: 0; }
+  .tab.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+  .wallet-line { font-size: 14px; color: #b9bef0; margin-bottom: 12px; }
+  .wallet-line b { color: #ffd54f; font-size: 18px; }
+  .shop-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .shop-item { position: relative; background: #141733; border: 1px solid var(--border); border-radius: 12px; padding: 12px 8px 10px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .idx { position: absolute; top: 5px; left: 8px; font-size: 10px; color: #6a6fa8; background: #0f1123; border-radius: 6px; padding: 1px 6px; }
+  .shape-prev { display: grid; gap: 2px; }
+  .shape-prev div { width: 17px; height: 17px; border-radius: 3px; background: rgba(255,255,255,.04); }
+  .shop-item .name { font-size: 13px; font-weight: 600; }
+  .price { color: #ffd54f; font-weight: 700; font-size: 16px; }
+  .price s { color: #8a8fb8; font-size: 12px; margin-right: 5px; }
+  .buy-btn { width: 100%; padding: 7px 0; font-size: 13px; border-radius: 8px; }
+  .buy-btn.gold { background: linear-gradient(135deg,#ffd54f,#ff9f43); border: none; color: #3a2c00; font-weight: 700; }
+  .buy-btn.gold:hover { filter: brightness(1.12); }
+  .buy-btn.locked { opacity: .6; }
+  .pack { display: flex; align-items: center; gap: 10px; background: #141733; border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; text-align: left; }
+  .pack.hot { border-color: #ffd54f; box-shadow: 0 0 16px rgba(255,213,79,.25); }
+  .pack .pay { font-size: 24px; font-weight: 900; min-width: 62px; color: #fff; }
+  .pack .info { flex: 1; font-size: 13px; color: #b9bef0; line-height: 1.7; }
+  .pack .info b { color: #ffd54f; font-size: 18px; }
+  .packbtn { background: var(--accent); border: none; color: #fff; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+  .packbtn:hover { filter: brightness(1.15); }
+  .packbtn:disabled { opacity: .7; cursor: default; }
+  .note { font-size: 12px; color: #6a6fa8; margin-top: 8px; }
+  .vip-text { font-size: 13px; color: #c6cbff; line-height: 2.1; text-align: left; }
+  .vip-text b { color: #ffd54f; }
+  #toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%) translateY(-160%); background: var(--accent); color: #fff; padding: 10px 22px; border-radius: 30px; font-size: 14px; z-index: 40; transition: transform .35s; box-shadow: 0 8px 30px rgba(0,0,0,.45); max-width: 90vw; }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  .shop-card h2 { letter-spacing: 2px; }
 </style>
 </head>
 <body>
@@ -124,6 +165,11 @@
     <div><h3>行数</h3><div class="score-box" id="lines">0</div></div>
     <div><h3>下一个</h3><div class="mini" id="next"></div></div>
     <div><h3>暂存</h3><div class="mini" id="hold"></div></div>
+    <div>
+      <h3>富豪钱包</h3>
+      <div class="coin-box" id="wallet">0 🪙</div>
+      <div id="vip-badge" class="vip-badge" style="display:none;">👑 富豪会员</div>
+    </div>
   </div>
 
   <div id="board"></div>
@@ -132,18 +178,56 @@
     <div>
       <h3>操作</h3>
       <p style="font-size:13px;line-height:1.9;color:#b9bef0;text-align:left;">
-        ← → 移动<br>↑ 旋转<br>↓ 加速下落<br>空格 直接落下<br>C 暂存方块<br>P 暂停 / 回车 开始
+        ← → 移动<br>↑ 旋转<br>↓ 加速下落<br>空格 直接落下<br>C 暂存方块<br>P 暂停 / 回车 开始<br><span style="color:#ffd54f">1-7 快捷买方块</span>
       </p>
     </div>
   </div>
 </div>
 
 <div id="overlay">
-  <h1>俄罗斯方块</h1>
+  <h1>💸 富豪俄罗斯方块</h1>
   <p class="big" id="final-score"></p>
-  <p id="overlay-hint">按 回车键 开始游戏</p>
-  <button id="start-btn" style="font-size:18px;padding:12px 34px;">开 始</button>
+  <p id="overlay-hint" style="font-size:14px;color:#ff8a80;line-height:2;">全付费模式：<b style="color:#ffd54f">每一块方块都要花钱买！</b><br>穷鬼请自觉离开 · 富豪请先买块入场</p>
+  <button id="start-btn" style="font-size:18px;padding:12px 34px;">🎫 买块入场</button>
 </div>
+
+<!-- ===== VIP 特权中心 ===== -->
+<div id="shop-modal" class="overlay2">
+  <div class="shop-card">
+    <div class="shop-head">
+      <div class="shop-title">💸 富豪方块商场（穷鬼勿入）</div>
+      <button class="x" id="shop-close">✕</button>
+    </div>
+    <div class="tabs">
+      <button class="tab on" data-tab="buy">🛒 买方块</button>
+      <button class="tab" data-tab="coin">💳 充值</button>
+      <button class="tab" data-tab="vip">✨ 特权</button>
+    </div>
+    <div class="wallet-line">我的余额：<b id="wallet-in-modal">0</b> 🪙　<span id="vip-in-modal"></span></div>
+    <div id="tab-buy" class="tab-page"></div>
+    <div id="tab-coin" class="tab-page" style="display:none"></div>
+    <div id="tab-vip" class="tab-page" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ===== 资金断裂（穷鬼冻结） ===== -->
+<div id="broke-modal" class="overlay2">
+  <div class="shop-card">
+    <h2 style="margin:2px 0 10px;">💸 资金链断裂！</h2>
+    <p style="font-size:13px;color:#ff8a80;line-height:1.9;margin-bottom:14px;">
+      您的钱包已见底，<b style="color:#ffd54f">下一块方块买不起了</b>。<br>
+      富豪身份当场过期——充钱才能继续搬砖方块！
+    </p>
+    <div class="tabs" style="margin:0 0 6px;">
+      <button class="tab" id="broke-recharge" style="background:linear-gradient(135deg,#ffd54f,#ff9f43);border:none;color:#3a2c00;font-weight:800;">💳 充钱续命</button>
+      <button class="tab" id="broke-buy">🛒 买块复活</button>
+      <button class="tab" id="broke-quit">🏳️ 认输跑路</button>
+    </div>
+    <p class="note">（也可按数字键 1-7 直接买单，随买随活）</p>
+  </div>
+</div>
+
+<div id="toast"></div>
 
 <script>
 "use strict";
@@ -186,6 +270,8 @@ let score = 0, linesCleared = 0, level = 1;
 let best = +(localStorage.getItem('tetris_best') || 0);
 let gameOver = false, paused = false, running = false;
 let dropTimer = null;
+let moneyLock = false;      // 没钱断供 → 游戏冻结
+let spentThisGame = 0;      // 本局氪金统计
 
 const scoreEl = document.getElementById('score');
 const bestEl  = document.getElementById('best');
@@ -193,18 +279,58 @@ const levelEl = document.getElementById('level');
 const linesEl = document.getElementById('lines');
 bestEl.textContent = best;
 
+// ---------- 虚拟钱包 / 富豪会员 / 商店数据 ----------
+let coins = +(localStorage.getItem('tetris_rich_coins') || 0);   // 富豪版：开局 0 金币！不充钱玩不了
+let vip = localStorage.getItem('tetris_rich_vip') === '1';       // 充过钱 = 富豪会员（8 折）
+const SHAPE_NAMES = ['长条 I', '方块 O', 'T 形', 'L 形', 'J 形', 'S 形', 'Z 形'];
+const PRICES = [8, 5, 6, 4, 4, 3, 3];                            // 每块明码标价，不同块不同价
+const PACKS = [
+  { pay: '¥1',  coin: 100,   note: '穷鬼救济包（约 20 块）',  tip: '勉强够入场被羞辱 😂' },
+  { pay: '¥6',  coin: 680,   note: '会员套餐，全场 8 折',      tip: '👑 首充解锁 永久富豪会员', hot: true },
+  { pay: '¥30', coin: 3800,  note: '额外赠送 200 金币',        tip: '👑 中产豪横包' },
+  { pay: '¥98', coin: 13800, note: '额外赠送 1000 金币',       tip: '👑 真·富豪，随便造' },
+];
+const POOR_LINES = [
+  '🖕 穷鬼！连块都买不起，先去搬砖！',
+  '👛 余额不足，你的穷酸已经藏不住了～',
+  '😂 买不起就别硬撑，连 ¥6 首充都舍不得？',
+  '🪙 金币不够？建议把手机也卖了。',
+  '💸 就这？穷鬼的挣扎真是令人感动。',
+];
+const ENTER_TAUNTS = [
+  '🖕 穷鬼想白嫖？一块方块都不买也配入场？',
+  '🎫 没买块还想玩？富人的游戏不欢迎白嫖党！',
+  '😏 连最便宜的 S 块都舍不得买？玩什么富豪方块！',
+];
+function taunt(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function priceOf(t) { return vip ? Math.ceil(PRICES[t] * 0.8) : PRICES[t]; } // 会员 8 折
+function saveWallet() {
+  localStorage.setItem('tetris_rich_coins', coins);
+  localStorage.setItem('tetris_rich_vip', vip ? '1' : '0');
+}
+let toastTimer = null;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+function updateWallet() {
+  document.getElementById('wallet').textContent = coins > 0 ? coins + ' 🪙' : '0 🪙（穷鬼）';
+  document.getElementById('wallet-in-modal').textContent = coins;
+  document.getElementById('vip-badge').style.display = vip ? 'inline-block' : 'none';
+  document.getElementById('vip-in-modal').textContent = vip ? '👑 富豪会员 · 全场 8 折' : '👤 未消费（穷鬼）';
+}
+
 // ---------- 工具 ----------
 function emptyBoard() {
   return Array.from({ length: ROWS }, () => Array(COLS).fill(EMPTY));
 }
-function randType() { return Math.floor(Math.random() * SHAPES.length); }
 function spawnType(t) {
   const s = SHAPES[t];
   const m = s.m.map(row => row.slice());
   return { m, c: s.c, type: t, r: 0, cPos: Math.floor((COLS - m[0].length) / 2) };
-}
-function refill() {
-  while (queue.length < 6) queue.push(randType());
 }
 function collide(p, board) {
   for (let r = 0; r < p.m.length; r++)
@@ -289,7 +415,7 @@ function updateHUD() {
   scoreEl.textContent = score;
   levelEl.textContent = level;
   linesEl.textContent = linesCleared;
-  drawMini(nextEl, queue[0]);
+  if (queue.length) drawMini(nextEl, queue[0]); else nextEl.innerHTML = '';
   if (holdType === null) holdEl.innerHTML = '';
   else drawMini(holdEl, holdType);
 }
@@ -329,27 +455,47 @@ function clearLines() {
 }
 
 function spawnNext() {
-  refill();
+  if (queue.length === 0) { enterMoneyLock(); return; }  // 没买块 → 断供冻结
   current = spawnType(queue.shift());
   if (collide(current, board)) { endGame(); return; }
   render();
   updateHUD();
 }
-
+// 没钱断供 → 游戏冻结，请去充钱/买块续命
+function enterMoneyLock() {
+  if (!running || gameOver) return;
+  moneyLock = true;
+  current = null;
+  render(); updateHUD();
+  document.getElementById('broke-modal').classList.add('show');
+  toast('💸 断粮了！想继续当富豪？快去充钱买方块！');
+}
+function hideBroke() { document.getElementById('broke-modal').classList.remove('show'); }
+// 付款买块成功后被调用来复活
+function reviveAfterBuy() {
+  if (!running || gameOver || !moneyLock) return;
+  moneyLock = false;
+  hideBroke();
+  closeShop();
+  spawnNext();   // 刚买的块顶上
+}
 function endGame() {
-  gameOver = true; running = false;
+  gameOver = true; running = false; moneyLock = false;
   clearInterval(dropTimer);
+  hideBroke();
   const ov = document.getElementById('overlay');
   document.getElementById('final-score').textContent = '得分：' + score;
-  document.getElementById('overlay-hint').textContent =
-    score >= best && score > 0 ? '🎉 新纪录！按 回车键 再来一局' : '按 回车键 再来一局';
+  document.getElementById('overlay-hint').innerHTML =
+    '💸 本局氪金 <b style="color:#ffd54f">' + spentThisGame + ' 🪙</b>，得分 ' + score +
+    (score >= best && score > 0 ? ' · 🎉 新纪录！' : '') +
+    '<br>想再来一局？按 回车键，先滚去买方块！';
   ov.classList.add('show');
 }
 
 function speed() { return Math.max(80, 800 - (level - 1) * 70); }
 
 function tick() {
-  if (!running || paused || gameOver) return;
+  if (!running || paused || gameOver || moneyLock) return;
   if (!collide({ ...current, r: current.r + 1 }, board)) {
     current.r++;
     render();
@@ -358,18 +504,18 @@ function tick() {
 
 // ---------- 操作 ----------
 function move(dx) {
-  if (!running || paused || gameOver) return;
+  if (!running || paused || gameOver || moneyLock) return;
   const test = { ...current, cPos: current.cPos + dx };
   if (!collide(test, board)) { current = test; render(); }
 }
 function softDrop() {
-  if (!running || paused || gameOver) return;
+  if (!running || paused || gameOver || moneyLock) return;
   if (!collide({ ...current, r: current.r + 1 }, board)) {
     current.r++; score += 1; updateHUD(); render();
   } else lock();
 }
 function hardDrop() {
-  if (!running || paused || gameOver) return;
+  if (!running || paused || gameOver || moneyLock) return;
   const y = dropY();
   score += (y - current.r) * 2;
   current.r = y;
@@ -377,7 +523,7 @@ function hardDrop() {
   lock();
 }
 function doHold() {
-  if (!running || paused || gameOver || !canHold) return;
+  if (!running || paused || gameOver || !canHold || moneyLock) return;
   if (holdType === null) {
     holdType = current.type;
     spawnNext();
@@ -393,10 +539,16 @@ function doHold() {
 
 // ---------- 控制 ----------
 function startGame() {
+  if (queue.length === 0) {   // 没买块还想入场？嘲讽你！
+    toast(taunt(ENTER_TAUNTS));
+    openShop(vip ? 'buy' : 'coin');
+    return;
+  }
   board = emptyBoard();
-  score = 0; linesCleared = 0; level = 1;
+  score = 0; linesCleared = 0; level = 1; spentThisGame = 0;
   gameOver = false; paused = false; running = true; canHold = true;
-  holdType = null; queue = []; refill();
+  holdType = null; moneyLock = false;
+  hideBroke();
   document.getElementById('overlay').classList.remove('show');
   clearInterval(dropTimer);
   dropTimer = setInterval(tick, speed());
@@ -413,12 +565,17 @@ function togglePause() {
 }
 
 document.addEventListener('keydown', e => {
-  const ov = document.getElementById('overlay');
+  const shop = document.getElementById('shop-modal');
+  if (shop.classList.contains('show')) {   // 商店开着时，只响应 Esc
+    if (e.key === 'Escape') closeShop();
+    return;
+  }
+  if (e.key >= '1' && e.key <= '7') { buyShape(+e.key - 1); return; }  // 随时按数字键买单
   if (e.key === 'Enter') {
     if (!running || gameOver || paused) { startGame(); e.preventDefault(); }
     return;
   }
-  if (!running || gameOver) return;
+  if (!running || gameOver || moneyLock) return;
   switch (e.key) {
     case 'ArrowLeft':  case 'a': case 'A': move(-1); break;
     case 'ArrowRight': case 'd': case 'D': move(1);  break;
@@ -451,12 +608,163 @@ row.append(
   mkBtn('⤓', hardDrop),
   mkBtn('C', doHold),
   mkBtn('⏸', togglePause),
+  mkBtn('🛒 商店', () => openShop('buy')),
+  mkBtn('💰 充值', () => openShop('coin')),
 );
 document.body.appendChild(row);
 
+// ---------- 商店界面 ----------
+function shapePrev(t) {
+  const s = SHAPES[t];
+  const wrap = document.createElement('div');
+  wrap.className = 'shape-prev';
+  wrap.style.gridTemplateColumns = 'repeat(' + s.m[0].length + ', 1fr)';
+  for (let r = 0; r < s.m.length; r++)
+    for (let c = 0; c < s.m[r].length; c++) {
+      const d = document.createElement('div');
+      if (s.m[r][c]) d.style.background = s.c;
+      wrap.appendChild(d);
+    }
+  return wrap;
+}
+function buildBuyTab() {
+  const el = document.getElementById('tab-buy');
+  el.innerHTML = '';
+  const tip = document.createElement('p');
+  tip.style.cssText = 'font-size:12px;color:#9aa0d8;margin:0 0 10px;line-height:1.7';
+  tip.textContent = '💸 全付费！每一块都得自己掏钱买，买完它就是你的下一块。键盘 1-7 快捷下单。';
+  el.appendChild(tip);
+  const grid = document.createElement('div');
+  grid.className = 'shop-grid';
+  SHAPES.forEach((s, t) => {
+    const item = document.createElement('div');
+    item.className = 'shop-item';
+    const idx = document.createElement('span'); idx.className = 'idx'; idx.textContent = t + 1;
+    item.appendChild(idx);
+    item.appendChild(shapePrev(t));
+    const nm = document.createElement('div'); nm.className = 'name'; nm.textContent = SHAPE_NAMES[t];
+    item.appendChild(nm);
+    const pr = document.createElement('div'); pr.className = 'price';
+    pr.innerHTML = (vip ? '<s>' + PRICES[t] + '</s>' : '') + priceOf(t) + ' 🪙';
+    item.appendChild(pr);
+    const btn = document.createElement('button');
+    btn.className = 'buy-btn';
+    btn.textContent = vip ? '设为下一块' : '🔒 穷鬼禁购 · 先充值';
+    if (vip) btn.classList.add('gold');
+    else btn.classList.add('locked');
+    btn.addEventListener('click', () => buyShape(t));
+    item.appendChild(btn);
+    grid.appendChild(item);
+  });
+  el.appendChild(grid);
+  if (!vip) {
+    const lock = document.createElement('p');
+    lock.className = 'note';
+    lock.innerHTML = '🔒 未消费的<b style="color:#ffd54f">穷鬼</b>连一块方块都买不起。<br>充值任意金额 → 永久富豪会员 👑（见「充值」页）';
+    el.appendChild(lock);
+  }
+}
+function buildCoinTab() {
+  const el = document.getElementById('tab-coin');
+  el.innerHTML = '';
+  const p = document.createElement('p');
+  p.style.cssText = 'font-size:12px;color:#9aa0d8;margin:0 0 10px;text-align:left';
+  p.textContent = '💳 穷鬼改造中心！本游戏全付费，先选套餐再充：';
+  el.appendChild(p);
+  PACKS.forEach(pk => {
+    const row = document.createElement('div');
+    row.className = 'pack' + (pk.hot ? ' hot' : '');
+    const pay = document.createElement('div'); pay.className = 'pay'; pay.textContent = pk.pay;
+    const info = document.createElement('div'); info.className = 'info';
+    info.innerHTML = '到账 <b>' + pk.coin + ' 🪙</b><br>' + pk.note + '　·　' + pk.tip;
+    const btn = document.createElement('button'); btn.className = 'packbtn'; btn.textContent = '立即充值';
+    btn.addEventListener('click', () => payNow(pk, btn));
+    row.append(pay, info, btn);
+    el.appendChild(row);
+  });
+  const d = document.createElement('p');
+  d.className = 'note';
+  d.textContent = '⚠️ 虚拟充值演示，不会真实扣费。但“穷鬼”嘲讽是真的 😈';
+  el.appendChild(d);
+}
+function buildVipTab() {
+  const el = document.getElementById('tab-vip');
+  el.innerHTML =
+    '<div style="text-align:center;font-size:15px;font-weight:700;margin-bottom:6px;">' +
+    (vip ? '👑 您已是 富豪会员' : '👤 普通玩家 · 穷鬼本鬼') + '</div>' +
+    '<div class="vip-text">' +
+    '<b>① 全付费制：</b>每一块方块都要自己掏钱买（会员 8 折）；<br>' +
+    '<b>② 无免费午餐：</b>不再白送金币、没有消行返利；<br>' +
+    '<b>③ 断供即冻结：</b>钱花光当场停摆，富豪身份作废；<br>' +
+    '<b>④ 永久会员：</b>任意一次充值即永久 8 折；<br>' +
+    '<b>⑤ 快捷操作：</b>游戏中按 1-7 直接扫码买块续命。</div>';
+  if (!vip) {
+    const b = document.createElement('button');
+    b.style.cssText = 'margin-top:12px;background:linear-gradient(135deg,#ffd54f,#ff9f43);border:none;color:#3a2c00;font-weight:800;font-size:15px;padding:10px 26px;border-radius:30px;cursor:pointer';
+    b.textContent = '💳 充值当富豪';
+    b.addEventListener('click', () => openTab('coin'));
+    el.appendChild(b);
+  }
+}
+function openTab(name) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+  ['buy', 'coin', 'vip'].forEach(n => { document.getElementById('tab-' + n).style.display = (n === name) ? '' : 'none'; });
+}
+function openShop(tab) {
+  buildBuyTab(); buildCoinTab(); buildVipTab();
+  openTab(tab);
+  document.getElementById('shop-modal').classList.add('show');
+  updateWallet();
+}
+function closeShop() { document.getElementById('shop-modal').classList.remove('show'); }
+
+// 购买指定方块 → 付款后插入为下一块
+function buyShape(t) {
+  const need = priceOf(t);
+  if (!vip) { toast('🔒 未消费的穷鬼禁止买方块！请先充值任意金额 👑（¥6 套餐最划算）'); return; }
+  if (coins < need) { toast(taunt(POOR_LINES) + '（还差 ' + (need - coins) + ' 🪙，点 💰 充值）'); return; }
+  coins -= need;
+  if (running && !gameOver) spentThisGame += need;
+  saveWallet(); updateWallet();
+  queue.unshift(t);   // 插队：下一块就是它
+  updateHUD();
+  const tail =
+    moneyLock ? '· 钱到货，游戏立即复活！' :
+    (!running || gameOver) ? '· 已就绪 ' + queue.length + ' 块，按 回车键 入场！' :
+    paused ? '· 已入队（暂停中，按 P 继续）' : '· 当前方块落地后就是它！';
+  toast('💸 付款 ' + need + ' 🪙，喜提「' + SHAPE_NAMES[t] + '」，余额 ' + coins + ' 🪙 ' + tail);
+  if (!running) closeShop();
+  if (moneyLock && running && !gameOver) reviveAfterBuy();
+}
+// 虚拟充值（仅图一乐，不会真实扣费）
+function payNow(pk, btn) {
+  btn.textContent = '支付中…';
+  btn.disabled = true;
+  setTimeout(() => {
+    const first = !vip;
+    coins += pk.coin;
+    vip = true;
+    saveWallet(); updateWallet();
+    buildBuyTab(); buildVipTab();
+    if (moneyLock && running) openTab('buy');   // 断供中充值完 → 直接去选块复活
+    btn.textContent = '✓ 已到账';
+    setTimeout(() => { btn.textContent = '立即充值'; btn.disabled = false; }, 1500);
+    toast(first
+      ? '💳 恭喜脱离穷鬼行列！到账 ' + pk.coin + ' 🪙，永久富豪会员 👑（全场 8 折）'
+      : '💳 到账 ' + pk.coin + ' 🪙，富豪身份再次确认 💸');
+  }, 500);
+}
+document.getElementById('shop-close').addEventListener('click', closeShop);
+document.getElementById('shop-modal').addEventListener('click', e => { if (e.target.id === 'shop-modal') closeShop(); });
+document.querySelectorAll('#shop-modal .tab').forEach(b => b.addEventListener('click', () => openTab(b.dataset.tab)));
+document.getElementById('broke-recharge').addEventListener('click', () => { hideBroke(); openShop('coin'); });
+document.getElementById('broke-buy').addEventListener('click', () => { hideBroke(); openShop('buy'); });
+document.getElementById('broke-quit').addEventListener('click', endGame);
+
 // 首屏
 document.getElementById('overlay').classList.add('show');
-drawMini(nextEl, 0);
+updateHUD();
+updateWallet();
 </script>
 </body>
 </html>
