@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320" width="900" height="320" role="img" aria-label="甜蜜俄罗斯方块 Sweet Tetris">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22090f"/>
+      <stop offset="45%" stop-color="#521a38"/>
+      <stop offset="100%" stop-color="#3a0f2a"/>
+    </linearGradient>
+    <linearGradient id="title" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffd1e3"/>
+      <stop offset="50%" stop-color="#ff6fae"/>
+      <stop offset="100%" stop-color="#d7a8ff"/>
+    </linearGradient>
+    <linearGradient id="cta" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff9ad5"/>
+      <stop offset="100%" stop-color="#ff2f86"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#ff6fae" stop-opacity=".35"/>
+      <stop offset="100%" stop-color="#ff6fae" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="900" height="320" fill="url(#bg)"/>
+  <rect width="900" height="320" fill="url(#halo)"/>
+
+  <!-- 漂浮爱心 -->
+  <g fill="#ff6fae" opacity=".55" filter="url(#soft)">
+    <path d="M120 70 c0-14 20-14 20 2 c0 12-20 22-20 22 s-20-10-20-22 c0-16 20-16 20-2z"/>
+    <path d="M800 96 c0-10 14-10 14 1.5 c0 8.5-14 15.5-14 15.5 s-14-7-14-15.5 c0-11.5 14-11.5 14-1.5z"/>
+    <path d="M755 235 c0-8 11-8 11 1 c0 6.7-11 12-11 12 s-11-5.3-11-12 c0-9 11-9 11-1z"/>
+    <path d="M165 245 c0-9 13-9 13 1.5 c0 8-13 14.5-13 14.5 s-13-6.5-13-14.5 c0-10.5 13-10.5 13-1.5z"/>
+  </g>
+  <g fill="#ffe9f0" opacity=".85">
+    <circle cx="70" cy="180" r="3"/>
+    <circle cx="840" cy="60" r="3.5"/>
+    <circle cx="300" cy="290" r="2.5"/>
+    <circle cx="620" cy="36" r="2.5"/>
+    <circle cx="855" cy="180" r="2.5"/>
+  </g>
+
+  <!-- 方块堆（甜蜜粉色系） -->
+  <g filter="url(#soft)">
+    <!-- S 深玫红 -->
+    <g fill="#ff6b9d"><rect x="60" y="120" width="34" height="34" rx="6"/><rect x="94" y="120" width="34" height="34" rx="6"/><rect x="94" y="154" width="34" height="34" rx="6"/><rect x="128" y="154" width="34" height="34" rx="6"/></g>
+    <!-- T 香芋紫 -->
+    <g fill="#d7a8ff"><rect x="60" y="196" width="34" height="34" rx="6"/><rect x="94" y="196" width="34" height="34" rx="6"/><rect x="128" y="196" width="34" height="34" rx="6"/><rect x="94" y="230" width="34" height="34" rx="6"/></g>
+
+    <!-- 右侧堆叠 -->
+    <g fill="#ff9ad5"><rect x="740" y="130" width="34" height="34" rx="6"/><rect x="740" y="164" width="34" height="34" rx="6"/><rect x="774" y="164" width="34" height="34" rx="6"/><rect x="774" y="198" width="34" height="34" rx="6"/></g>
+    <g fill="#ffd1e3"><rect x="808" y="164" width="34" height="34" rx="6"/><rect x="808" y="198" width="34" height="34" rx="6"/><rect x="842" y="198" width="34" height="34" rx="6"/><rect x="842" y="232" width="34" height="34" rx="6"/></g>
+  </g>
+
+  <!-- 标题 -->
+  <text x="450" y="140" text-anchor="middle" font-family="'Microsoft YaHei','PingFang SC','Segoe UI',sans-serif" font-size="66" font-weight="800" fill="url(#title)">甜蜜俄罗斯方块</text>
+  <text x="450" y="188" text-anchor="middle" font-family="'Segoe UI',Arial,sans-serif" font-size="30" font-weight="700" letter-spacing="6" fill="#ffd6e7">SWEET TETRIS</text>
+
+  <!-- 标语 -->
+  <text x="450" y="232" text-anchor="middle" font-family="'Microsoft YaHei','PingFang SC','Segoe UI',sans-serif" font-size="19" fill="#f0b6d0">每落下一块，心动多一点点 💗</text>
+
+  <!-- CTA 药丸 -->
+  <g>
+    <rect x="342" y="252" width="216" height="44" rx="22" fill="url(#cta)"/>
+    <text x="450" y="280" text-anchor="middle" font-family="'Microsoft YaHei','Segoe UI',sans-serif" font-size="19" font-weight="700" fill="#3a0f2a">开 始 · 恋 爱 💘</text>
+  </g>
+</svg>
