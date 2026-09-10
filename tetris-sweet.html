@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>甜蜜俄罗斯方块 💕 Sweet Tetris</title>
+<style>
+  :root {
+    --bg: #2b0e1c;
+    --panel: #43152b;
+    --border: #6b2a48;
+    --text: #ffe9f0;
+    --accent: #ff6fae;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: linear-gradient(135deg, #2b0e1c, #521a38, #33102a, #4a1330, #2b0e1c);
+    background-size: 400% 400%;
+    animation: bgShift 26s ease-in-out infinite;
+    color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    overflow: hidden;
+  }
+  @keyframes bgShift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* 背景氛围层 */
+  #bgfx { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .75; }
+
+  #wrap {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    padding: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    will-change: transform;
+  }
+  .side {
+    width: 148px;
+    background: linear-gradient(180deg, rgba(67,21,43,.92), rgba(43,14,28,.92));
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    text-align: center;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 8px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .side h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #f0a8c8;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .score-box { font-size: 20px; font-weight: 700; color: #ffd6e7; transition: transform .18s ease; }
+  .score-box.bump { animation: bump .32s ease; }
+  @keyframes bump {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.28); color: #fff; text-shadow: 0 0 16px #ff6fae; }
+    100% { transform: scale(1); }
+  }
+  .mini {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    width: 76px;
+    margin: 0 auto;
+  }
+  .mini div { aspect-ratio: 1; border-radius: 3px; background: rgba(255,255,255,0.04); transition: box-shadow .2s; }
+
+  /* 甜蜜值进度条 */
+  .love-track {
+    height: 13px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    padding: 2px;
+  }
+  .love-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #ff6fae, #ffd1e3, #d7a8ff, #ff6fae);
+    background-size: 250% 100%;
+    animation: shimmer 2.4s linear infinite;
+    transition: width .35s cubic-bezier(.4,1.6,.5,1);
+    box-shadow: 0 0 12px rgba(255,111,174,.85);
+  }
+  @keyframes shimmer { to { background-position: 250% 0; } }
+  .love-label { font-size: 11px; color: #f0b6d0; margin-top: 5px; letter-spacing: 1px; }
+
+  #board {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    grid-template-rows: repeat(20, 1fr);
+    width: min(46vh, 320px);
+    aspect-ratio: 1/2;
+    background: linear-gradient(180deg, rgba(67,21,43,.95), rgba(38,12,25,.95));
+    border: 3px solid var(--border);
+    border-radius: 12px;
+    padding: 5px;
+    gap: 2px;
+    box-shadow: 0 0 40px rgba(255, 111, 174, 0.25), inset 0 0 40px rgba(255,111,174,.06);
+    animation: boardPulse 4.5s ease-in-out infinite;
+    transition: box-shadow .6s ease;
+  }
+  @keyframes boardPulse {
+    0%, 100% { box-shadow: 0 0 34px rgba(255,111,174,.22), inset 0 0 40px rgba(255,111,174,.05); }
+    50%      { box-shadow: 0 0 58px rgba(255,111,174,.45), inset 0 0 60px rgba(255,111,174,.12); }
+  }
+  body.burst #board { animation: rainbowGlow 1.6s linear infinite; }
+  @keyframes rainbowGlow {
+    0%   { box-shadow: 0 0 60px #ff6fae, 0 0 110px #ff2f86; border-color: #ff6fae; }
+    33%  { box-shadow: 0 0 60px #d7a8ff, 0 0 110px #a855f7; border-color: #d7a8ff; }
+    66%  { box-shadow: 0 0 60px #ffd1a8, 0 0 110px #ffb86b; border-color: #ffd1a8; }
+    100% { box-shadow: 0 0 60px #ff6fae, 0 0 110px #ff2f86; border-color: #ff6fae; }
+  }
+
+  #board div {
+    border-radius: 4px;
+    background: rgba(255,255,255,0.04);
+  }
+  .cell {
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.28), inset 0 -4px 6px rgba(0,0,0,.18), 0 0 10px rgba(255,111,174,.35);
+    transition: background-color 70ms linear;
+  }
+  .cell.ghost {
+    opacity: 0.18 !important;
+    box-shadow: none !important;
+  }
+  .cell.clearing {
+    background: #fff !important;
+    box-shadow: 0 0 18px #fff, 0 0 34px #ff6fae !important;
+    animation: cellClear .3s ease forwards;
+  }
+  @keyframes cellClear {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(1.35); }
+    100% { transform: scale(.05); opacity: 0; }
+  }
+
+  .btn-row {
+    position: fixed;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    z-index: 12;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+  button {
+    background: linear-gradient(180deg, #55192f, #3a1024);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 16px;
+    cursor: pointer;
+    min-width: 52px;
+    transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  button:hover { background: #5a2038; border-color: var(--accent); box-shadow: 0 0 16px rgba(255,111,174,.5); }
+  button:active { transform: scale(0.94); }
+
+  /* 浮动提示 */
+  #toasts {
+    position: fixed;
+    top: 11%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .toast {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #fff;
+    text-shadow: 0 0 16px #ff2f86, 0 0 42px #ff6fae;
+    animation: toastPop 1.6s ease forwards;
+    white-space: nowrap;
+  }
+  @keyframes toastPop {
+    0%   { opacity: 0; transform: translateY(16px) scale(.6); }
+    18%  { opacity: 1; transform: translateY(0) scale(1.12); }
+    30%  { transform: scale(1); }
+    75%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-26px) scale(.95); }
+  }
+
+  #flash {
+    position: fixed; inset: 0;
+    background: #fff; opacity: 0;
+    pointer-events: none; z-index: 25;
+    transition: opacity .55s ease;
+  }
+
+  #overlay {
+    position: fixed; inset: 0;
+    background: radial-gradient(circle at 50% 45%, rgba(90,27,60,.9), rgba(30,9,20,.94));
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+    z-index: 20;
+    backdrop-filter: blur(4px);
+  }
+  #overlay.show { display: flex; animation: fadeIn .35s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  #overlay h1 {
+    font-size: 40px;
+    letter-spacing: 4px;
+    color: #ffd6e7;
+    text-shadow: 0 0 26px #ff2f86;
+    animation: titleBeat 2.4s ease-in-out infinite;
+  }
+  @keyframes titleBeat {
+    0%, 100% { transform: scale(1); }
+    12% { transform: scale(1.06); }
+    24% { transform: scale(1); }
+  }
+  #overlay p { color: #f0b6d0; font-size: 16px; }
+  #overlay .big { font-size: 26px; color: #ffd6e7; font-weight: 700; }
+
+  #fx { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
+</style>
+</head>
+<body>
+
+<canvas id="bgfx"></canvas>
+
+<div id="wrap">
+  <div class="side">
+    <div><h3>分数</h3><div class="score-box" id="score">0</div></div>
+    <div><h3>最高分</h3><div class="score-box" id="best">0</div></div>
+    <div><h3>等级</h3><div class="score-box" id="level">1</div></div>
+    <div><h3>行数</h3><div class="score-box" id="lines">0</div></div>
+    <div>
+      <h3>甜蜜值 💗</h3>
+      <div class="love-track"><div class="love-fill" id="love"></div></div>
+      <div class="love-label" id="love-label">0% · 恋人未满</div>
+    </div>
+    <div><h3>下一个</h3><div class="mini" id="next"></div></div>
+    <div><h3>暂存</h3><div class="mini" id="hold"></div></div>
+  </div>
+
+  <div id="board"></div>
+
+  <div class="side">
+    <div>
+      <h3>操作</h3>
+      <p style="font-size:13px;line-height:1.9;color:#f0b6d0;text-align:left;">
+        ← → 移动<br>↑ 旋转<br>↓ 加速下落<br>空格 直接落下<br>C 暂存方块<br>P 暂停 / 回车 开始
+      </p>
+    </div>
+    <div>
+      <h3>心情</h3>
+      <button id="sound-btn" style="font-size:14px;padding:8px 12px;min-width:auto;width:100%;">🔊 音乐 ON</button>
+    </div>
+  </div>
+</div>
+
+<div id="overlay">
+  <h1>甜蜜俄罗斯方块 💕</h1>
+  <p class="big" id="final-score"></p>
+  <p id="overlay-hint">按 回车键 开始游戏</p>
+  <button id="start-btn" style="font-size:18px;padding:12px 34px;">开 始 💘</button>
+</div>
+
+<div id="toasts"></div>
+<div id="flash"></div>
+<canvas id="fx"></canvas>
+
+<script>
+"use strict";
+// ================= 甜蜜俄罗斯方块 · 恋爱沉浸版 =================
+const COLS = 10, ROWS = 20, EMPTY = 0;
+
+// 方块定义 —— 甜蜜粉色系
+const SHAPES = [
+  { m: [[1,1,1,1]],                c: '#ff9ad5' }, // I 樱花粉
+  { m: [[1,1],[1,1]],              c: '#ffd1e3' }, // O 淡粉
+  { m: [[0,1,0],[1,1,1]],          c: '#d7a8ff' }, // T 香芋紫
+  { m: [[1,0,0],[1,1,1]],          c: '#ff8ac2' }, // L 玫瑰粉
+  { m: [[0,0,1],[1,1,1]],          c: '#fca8c8' }, // J 蜜桃粉
+  { m: [[0,1,1],[1,1,0]],          c: '#ff6b9d' }, // S 深玫红
+  { m: [[1,1,0],[0,1,1]],          c: '#ffb8a8' }, // Z 珊瑚粉
+];
+
+const boardEl = document.getElementById('board');
+const nextEl  = document.getElementById('next');
+const holdEl  = document.getElementById('hold');
+const wrapEl  = document.getElementById('wrap');
+const flashEl = document.getElementById('flash');
+const toastsEl = document.getElementById('toasts');
+
+// 构建 20x10 网格
+const cells = [];
+for (let r = 0; r < ROWS; r++) {
+  cells.push([]);
+  for (let c = 0; c < COLS; c++) {
+    const d = document.createElement('div');
+    boardEl.appendChild(d);
+    cells[r].push(d);
+  }
+}
+
+// ---------- 状态 ----------
+let board = [];
+let current = null;
+let queue = [];
+let holdType = null;
+let canHold = true;
+let score = 0, linesCleared = 0, level = 1;
+let best = +(localStorage.getItem('tetris_best') || 0);
+let gameOver = false, paused = false, running = false, pendingClear = false;
+let dropTimer = null;
+
+let love = 0;            // 甜蜜值 0~100
+let combo = 0;           // 连击
+let burstActive = false; // 甜蜜爆裂
+let shakeMag = 0;
+let lastMoveSound = 0;
+
+const scoreEl = document.getElementById('score');
+const bestEl  = document.getElementById('best');
+const levelEl = document.getElementById('level');
+const linesEl = document.getElementById('lines');
+const loveEl  = document.getElementById('love');
+const loveLabelEl = document.getElementById('love-label');
+bestEl.textContent = best;
+
+// ================= 音效（柔和合成音） =================
+let actx = null, soundOn = true;
+function audioCtx() {
+  if (!actx) {
+    try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
+  }
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function tone(freq, dur = 0.12, type = 'sine', vol = 0.05, delay = 0) {
+  if (!soundOn) return;
+  const a = audioCtx(); if (!a) return;
+  const t0 = a.currentTime + delay;
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t0);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.linearRampToValueAtTime(vol, t0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g); g.connect(a.destination);
+  o.start(t0); o.stop(t0 + dur + 0.03);
+}
+const SFX = {
+  move:   () => tone(540, 0.05, 'triangle', 0.028),
+  rotate: () => { tone(720, 0.07, 'sine', 0.035); tone(980, 0.07, 'sine', 0.022, 0.04); },
+  lock:   () => tone(180, 0.1, 'sine', 0.05),
+  hold:   () => { tone(600, 0.08, 'sine', 0.04); tone(820, 0.1, 'sine', 0.03, 0.06); },
+  clear:  (n) => {
+    const base = [0, 523, 587, 659, 784][n] || 523;
+    for (let i = 0; i < 3 + n; i++) tone(base * Math.pow(1.15, i), 0.22, 'sine', 0.045, i * 0.055);
+  },
+  level:  () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.32, 'sine', 0.05, i * 0.12)),
+  over:   () => [660, 550, 440, 330].forEach((f, i) => tone(f, 0.4, 'sine', 0.05, i * 0.16)),
+  burst:  () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.5, 'triangle', 0.05, i * 0.09)),
+};
+
+// ================= 画布：背景氛围 + 前景特效 =================
+const bgCanvas = document.getElementById('bgfx'), bg = bgCanvas.getContext('2d');
+const fxCanvas = document.getElementById('fx'), fx = fxCanvas.getContext('2d');
+
+function heartPath(ctx, x, y, size) {
+  const s = size / 16;
+  ctx.beginPath();
+  ctx.moveTo(x, y + 4 * s);
+  ctx.bezierCurveTo(x, y, x - 8 * s, y - 6 * s, x - 8 * s, y + 1 * s);
+  ctx.bezierCurveTo(x - 8 * s, y + 7 * s, x, y + 11 * s, x, y + 15 * s);
+  ctx.bezierCurveTo(x, y + 11 * s, x + 8 * s, y + 7 * s, x + 8 * s, y + 1 * s);
+  ctx.bezierCurveTo(x + 8 * s, y - 6 * s, x, y, x, y + 4 * s);
+  ctx.closePath();
+}
+function starPath(ctx, x, y, r) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const ang = -Math.PI / 2 + i * Math.PI / 5;
+    const rr = (i % 2) ? r * 0.44 : r;
+    const px = x + Math.cos(ang) * rr, py = y + Math.sin(ang) * rr;
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.closePath();
+}
+
+// ---------- 背景漂浮爱心 ----------
+let bob = [];
+function newBob(initial) {
+  return {
+    x: Math.random() * innerWidth,
+    y: initial ? Math.random() * innerHeight : innerHeight + 40 + Math.random() * 200,
+    s: 8 + Math.random() * 30,
+    v: 0.2 + Math.random() * 0.85,
+    a: 0.05 + Math.random() * 0.16,
+    drift: (Math.random() - 0.5) * 0.35,
+    phase: Math.random() * Math.PI * 2,
+    kind: Math.random() < 0.62 ? 'heart' : 'bubble',
+    hue: [330, 345, 300, 275, 20][Math.floor(Math.random() * 5)],
+  };
+}
+function resizeCanvas() {
+  bgCanvas.width = fxCanvas.width = innerWidth;
+  bgCanvas.height = fxCanvas.height = innerHeight;
+  initBob();
+}
+function initBob() {
+  bob = [];
+  const n = Math.round(Math.min(46, innerWidth / 30));
+  for (let i = 0; i < n; i++) bob.push(newBob(true));
+}
+function bgLoop(t) {
+  bg.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+  const time = t * 0.001;
+  for (const b of bob) {
+    b.y -= b.v;
+    b.x += b.drift + Math.sin(time + b.phase) * 0.35;
+    if (b.y < -70) { Object.assign(b, newBob(false)); }
+    bg.save();
+    if (b.kind === 'heart') {
+      bg.globalAlpha = b.a;
+      bg.fillStyle = `hsl(${b.hue}, 85%, 72%)`;
+      bg.shadowColor = `hsla(${b.hue}, 100%, 65%, .8)`;
+      bg.shadowBlur = 22;
+      heartPath(bg, b.x, b.y, b.s);
+      bg.fill();
+    } else {
+      const g = bg.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.s);
+      g.addColorStop(0, `hsla(${b.hue}, 100%, 85%, ${b.a * 2.2})`);
+      g.addColorStop(1, `hsla(${b.hue}, 100%, 70%, 0)`);
+      bg.globalAlpha = 1;
+      bg.fillStyle = g;
+      bg.beginPath(); bg.arc(b.x, b.y, b.s, 0, Math.PI * 2); bg.fill();
+    }
+    bg.restore();
+  }
+  requestAnimationFrame(bgLoop);
+}
+
+// ---------- 前景粒子 / 飘字 ----------
+const FX_EMOJI = ['💖','💕','💗','💘','✨','🌸','💞','🩷','💝','💫'];
+const HEART_COLORS = ['#ff6fae','#ff9ad5','#ffd1e3','#ff2f86','#d7a8ff','#ffb8a8'];
+let particles = [];
+let texts = [];
+
+function spawnParticles(x, y, opts = {}) {
+  const {
+    count = 8, emojis = FX_EMOJI, size = 16, speed = 60,
+    rise = true, kinds = ['emoji','heart','star'], colors = HEART_COLORS, aura = 1,
+  } = opts;
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const sp = speed * (0.4 + Math.random());
+    particles.push({
+      kind: kinds[Math.floor(Math.random() * kinds.length)],
+      x: x + (Math.random() - 0.5) * 34,
+      y: y + (Math.random() - 0.5) * 34,
+      vx: Math.cos(a) * sp,
+      vy: rise ? -sp * (0.6 + Math.random()) : Math.sin(a) * sp,
+      g: 0.12,
+      life: 1,
+      decay: 0.012 + Math.random() * 0.018,
+      size: size * (0.7 + Math.random() * 0.6) * aura,
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.12,
+      emoji: emojis[Math.floor(Math.random() * emojis.length)],
+      color: colors[Math.floor(Math.random() * colors.length)],
+    });
+  }
+  if (particles.length > 900) particles.splice(0, particles.length - 900);
+}
+function spawnText(x, y, str, color = '#fff', size = 28) {
+  texts.push({ x, y, str, color, size, life: 1, decay: 0.012, vy: -0.9 });
+  if (texts.length > 40) texts.shift();
+}
+function burstCenter(el) {
+  const b = el.getBoundingClientRect();
+  return { x: b.left + b.width / 2, y: b.top + b.height / 2 };
+}
+function spawnHeartRain(n = 90) {
+  for (let i = 0; i < n; i++) {
+    particles.push({
+      kind: Math.random() < 0.7 ? 'heart' : 'emoji',
+      x: Math.random() * innerWidth,
+      y: -30 - Math.random() * innerHeight * 0.6,
+      vx: (Math.random() - 0.5) * 1.6,
+      vy: 3 + Math.random() * 5,
+      g: 0.05,
+      life: 1,
+      decay: 0.004 + Math.random() * 0.006,
+      size: 16 + Math.random() * 26,
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.1,
+      emoji: FX_EMOJI[Math.floor(Math.random() * FX_EMOJI.length)],
+      color: HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)],
+    });
+  }
+}
+function flashScreen(a) {
+  flashEl.style.transition = 'none';
+  flashEl.style.opacity = String(Math.min(0.85, a));
+  requestAnimationFrame(() => {
+    flashEl.style.transition = 'opacity .55s ease';
+    flashEl.style.opacity = '0';
+  });
+}
+function shake(mag) { shakeMag = Math.max(shakeMag, mag); }
+
+function drawParticle(p) {
+  if (p.kind === 'emoji') {
+    fx.font = Math.round(p.size) + 'px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+    fx.textAlign = 'center';
+    fx.textBaseline = 'middle';
+    fx.fillText(p.emoji, p.x, p.y);
+  } else {
+    fx.save();
+    fx.translate(p.x, p.y);
+    fx.rotate(p.rot);
+    fx.fillStyle = p.color;
+    fx.shadowColor = p.color;
+    fx.shadowBlur = 16;
+    if (p.kind === 'heart') heartPath(fx, 0, 0, p.size);
+    else starPath(fx, 0, 0, p.size * 0.6);
+    fx.fill();
+    fx.restore();
+  }
+}
+
+function fxLoop() {
+  fx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+
+  // 粒子
+  particles = particles.filter(p => p.life > 0);
+  for (const p of particles) {
+    p.x += p.vx; p.y += p.vy; p.vy += p.g; p.vx *= 0.985;
+    p.rot += p.vr;
+    p.life -= p.decay;
+    fx.globalAlpha = Math.max(0, Math.min(1, p.life));
+    drawParticle(p);
+  }
+  fx.globalAlpha = 1;
+
+  // 飘字
+  texts = texts.filter(t => t.life > 0);
+  fx.textAlign = 'center';
+  fx.textBaseline = 'middle';
+  for (const t of texts) {
+    t.y += t.vy; t.vy *= 0.985; t.life -= t.decay;
+    fx.globalAlpha = Math.max(0, Math.min(1, t.life));
+    fx.font = `800 ${t.size}px "Segoe UI", "Microsoft YaHei", sans-serif`;
+    fx.shadowColor = '#ff2f86';
+    fx.shadowBlur = 22;
+    fx.fillStyle = t.color;
+    fx.fillText(t.str, t.x, t.y);
+  }
+  fx.shadowBlur = 0;
+  fx.globalAlpha = 1;
+
+  // 屏幕震动
+  if (shakeMag > 0.3) {
+    const dx = (Math.random() - 0.5) * shakeMag;
+    const dy = (Math.random() - 0.5) * shakeMag;
+    wrapEl.style.transform = `translate(${dx}px, ${dy}px)`;
+    shakeMag *= 0.88;
+  } else if (shakeMag !== 0) {
+    shakeMag = 0;
+    wrapEl.style.transform = '';
+  }
+
+  requestAnimationFrame(fxLoop);
+}
+
+// 屏幕坐标换算
+function cellCenter(r, c) {
+  const d = cells[r][c].getBoundingClientRect();
+  return { x: d.left + d.width / 2, y: d.top + d.height / 2 };
+}
+function pieceCenter() {
+  if (!current) return null;
+  let sx = 0, sy = 0, n = 0;
+  for (let r = 0; r < current.m.length; r++)
+    for (let c = 0; c < current.m[r].length; c++)
+      if (current.m[r][c]) {
+        const y = current.r + r, x = current.cPos + c;
+        if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+          const p = cellCenter(y, x); sx += p.x; sy += p.y; n++;
+        }
+      }
+  return n ? { x: sx / n, y: sy / n } : null;
+}
+
+// ================= 工具 =================
+function emptyBoard() { return Array.from({ length: ROWS }, () => Array(COLS).fill(EMPTY)); }
+function randType() { return Math.floor(Math.random() * SHAPES.length); }
+function spawnType(t) {
+  const s = SHAPES[t];
+  const m = s.m.map(row => row.slice());
+  return { m, c: s.c, type: t, r: 0, cPos: Math.floor((COLS - m[0].length) / 2) };
+}
+function refill() { while (queue.length < 6) queue.push(randType()); }
+function collide(p, b) {
+  for (let r = 0; r < p.m.length; r++)
+    for (let c = 0; c < p.m[r].length; c++) {
+      if (!p.m[r][c]) continue;
+      const x = p.cPos + c, y = p.r + r;
+      if (x < 0 || x >= COLS || y >= ROWS) return true;
+      if (y >= 0 && b[y][x]) return true;
+    }
+  return false;
+}
+function rotateM(m) {
+  const n = m.length, w = m[0].length;
+  const out = Array.from({ length: w }, () => Array(n).fill(0));
+  for (let r = 0; r < n; r++)
+    for (let c = 0; c < w; c++)
+      out[c][n - 1 - r] = m[r][c];
+  return out;
+}
+function tryRotate(dir) {
+  if (!current) return false;
+  const rotated = rotateM(current.m);
+  const kicks = dir > 0 ? [0, -1, 1, -2, 2] : [0, 1, -1, 2, -2];
+  for (const k of kicks) {
+    const test = { ...current, m: rotated, cPos: current.cPos + k };
+    if (!collide(test, board)) {
+      current = test;
+      const c = pieceCenter();
+      if (c) spawnParticles(c.x, c.y, { count: 6, emojis: ['✨','🌸','💗','💫'], size: 14 });
+      SFX.rotate();
+      return true;
+    }
+  }
+  return false;
+}
+function dropY() {
+  let y = current.r;
+  while (!collide({ ...current, r: y + 1 }, board)) y++;
+  return y;
+}
+function fullRows() {
+  const rows = [];
+  for (let r = 0; r < ROWS; r++) if (board[r].every(v => v)) rows.push(r);
+  return rows;
+}
+
+// ================= 渲染 =================
+function render() {
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++) {
+      const d = cells[r][c];
+      d.style.background = board[r][c] || 'rgba(255,255,255,0.04)';
+      d.style.transform = '';
+      d.style.opacity = '';
+      d.className = '';
+    }
+  if (!current || gameOver) return;
+  const gy = dropY();
+  for (let r = 0; r < current.m.length; r++)
+    for (let c = 0; c < current.m[r].length; c++) {
+      if (!current.m[r][c]) continue;
+      const x = current.cPos + c, y = gy + r;
+      if (y >= 0 && y < ROWS) {
+        cells[y][x].style.background = current.c;
+        cells[y][x].className = 'cell ghost';
+      }
+    }
+  for (let r = 0; r < current.m.length; r++)
+    for (let c = 0; c < current.m[r].length; c++) {
+      if (!current.m[r][c]) continue;
+      const x = current.cPos + c, y = current.r + r;
+      if (y >= 0 && y < ROWS) {
+        cells[y][x].style.background = current.c;
+        cells[y][x].className = 'cell';
+      }
+    }
+}
+function drawMini(el, t) {
+  const s = SHAPES[t], m = s.m;
+  el.innerHTML = '';
+  for (let r = 0; r < 4; r++)
+    for (let c = 0; c < 4; c++) {
+      const d = document.createElement('div');
+      if (m[r] && m[r][c]) {
+        d.style.background = s.c;
+        d.style.boxShadow = `0 0 8px ${s.c}`;
+      }
+      el.appendChild(d);
+    }
+}
+function bump(el) {
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+}
+function loveTitle(v) {
+  if (v >= 100) return '恋爱满值 💞';
+  if (v >= 80) return '心动不已 💓';
+  if (v >= 60) return '热恋中 💗';
+  if (v >= 40) return '暧昧升温 💕';
+  if (v >= 20) return '怦然心动 💖';
+  if (v > 0)   return '悄悄喜欢 🩷';
+  return '恋人未满';
+}
+function updateHUD() {
+  scoreEl.textContent = score;
+  levelEl.textContent = level;
+  linesEl.textContent = linesCleared;
+  const shown = burstActive ? 100 : love;
+  loveEl.style.width = shown + '%';
+  loveLabelEl.textContent = Math.round(shown) + '% · ' + loveTitle(shown);
+  drawMini(nextEl, queue[0]);
+  if (holdType === null) holdEl.innerHTML = '';
+  else drawMini(holdEl, holdType);
+}
+
+// ================= 甜蜜提示 =================
+const SWEET_MSGS = ['好甜呀 🍬','心动的感觉 💓','再来一块 💕','我们好配 💞','甜蜜暴击 💖','恋爱加速中 💘','你接住我了 💗','永远在一起 🌸'];
+let lastMsg = 0;
+function showToast(msg) {
+  const d = document.createElement('div');
+  d.className = 'toast';
+  d.textContent = msg;
+  toastsEl.appendChild(d);
+  setTimeout(() => d.remove(), 1700);
+}
+function maybeSweetMsg() {
+  const now = performance.now();
+  if (now - lastMsg < 5200) return;
+  lastMsg = now;
+  showToast(SWEET_MSGS[Math.floor(Math.random() * SWEET_MSGS.length)]);
+}
+
+// ================= 游戏流程 =================
+function touchBoard() {
+  if (!running || paused || gameOver || pendingClear || !current) return true;
+  return false;
+}
+
+function lock() {
+  const c = pieceCenter();
+  if (c) spawnParticles(c.x, c.y, { count: 7, emojis: ['💗','💞','🌸'], size: 14, speed: 55 });
+  SFX.lock();
+  shake(4);
+
+  let toppedOut = false;
+  for (let r = 0; r < current.m.length; r++)
+    for (let cc = 0; cc < current.m[r].length; cc++)
+      if (current.m[r][cc]) {
+        const y = current.r + r, x = current.cPos + cc;
+        if (y < 0) toppedOut = true;
+        else board[y][x] = current.c;
+      }
+  if (toppedOut) { current = null; endGame(); return; }
+
+  love = Math.min(100, love + 1.6);       // 每放下一块，心动一点点
+  const rows = fullRows();
+
+  if (!rows.length) {
+    combo = 0;
+    current = null;
+    updateHUD();
+    render();
+    maybeSweetMsg();
+    spawnNext();
+  } else {
+    handleClear(rows);
+  }
+}
+
+function handleClear(rows) {
+  combo++;
+  const mult = burstActive ? 2 : 1;
+  const base = [0, 100, 300, 500, 800][rows.length] || 800;
+  const pts = Math.round(base * level * mult) + (combo > 1 ? (combo - 1) * 50 * level : 0);
+
+  score += pts;
+  linesCleared += rows.length;
+  const prevLevel = level;
+  level = Math.floor(linesCleared / 10) + 1;
+  love = Math.min(100, love + rows.length * 14 + combo * 3);
+  if (score > best) { best = score; localStorage.setItem('tetris_best', best); bestEl.textContent = best; }
+
+  // 消除动画 + 粒子
+  for (const r of rows)
+    for (let cc = 0; cc < COLS; cc++) {
+      const p = cellCenter(r, cc);
+      spawnParticles(p.x, p.y, { count: 2, size: 18, speed: 100 });
+      const d = cells[r][cc];
+      d.style.background = '#fff';
+      d.className = 'cell clearing';
+    }
+
+  const bc = burstCenter(boardEl);
+  const tag = rows.length === 4 ? '💥 TETRIS! ' : (rows.length > 1 ? rows.length + ' 行 ' : '');
+  spawnText(bc.x, bc.y - 40, tag + '+' + pts, '#ffffff', rows.length >= 3 ? 36 : 28);
+  if (combo > 1) spawnText(bc.x, bc.y + 10, '连击 ×' + combo + ' 💞', '#ffd1e3', 22);
+
+  shake(10 + rows.length * 5);
+  flashScreen(0.18 + rows.length * 0.09);
+  SFX.clear(rows.length);
+  bump(scoreEl);
+
+  if (level > prevLevel) {
+    showToast('恋爱升温 Lv.' + level + ' 💞');
+    SFX.level();
+    spawnHeartRain(70);
+    bump(levelEl);
+  } else if (combo >= 3) {
+    showToast('甜蜜连击 ×' + combo + ' 💕');
+  }
+
+  current = null;
+  pendingClear = true;
+
+  setTimeout(() => {
+    for (const r of rows.slice().sort((a, b) => b - a)) {
+      board.splice(r, 1);
+      board.unshift(Array(COLS).fill(EMPTY));
+    }
+    pendingClear = false;
+    canHold = true;
+    render();
+    checkBurst();
+    spawnNext();
+    updateHUD();
+  }, 300);
+}
+
+function checkBurst() {
+  if (love >= 100 && !burstActive) {
+    burstActive = true;
+    love = 0;
+    const bonus = 500 * level;
+    score += bonus;
+    if (score > best) { best = score; localStorage.setItem('tetris_best', best); bestEl.textContent = best; }
+    showToast('💞 恋爱满值！甜蜜爆裂 ×2');
+    const bc = burstCenter(boardEl);
+    spawnText(bc.x, bc.y, '+' + bonus + ' 爱你哟', '#ffd1e3', 30);
+    document.body.classList.add('burst');
+    spawnHeartRain(140);
+    shake(20);
+    flashScreen(0.5);
+    SFX.burst();
+    updateHUD();
+    setTimeout(() => {
+      burstActive = false;
+      document.body.classList.remove('burst');
+      updateHUD();
+    }, 9000);
+  }
+}
+
+function spawnNext() {
+  canHold = true;
+  refill();
+  current = spawnType(queue.shift());
+  if (collide(current, board)) { endGame(); return; }
+  const c = pieceCenter();
+  if (c) spawnParticles(c.x, c.y, { count: 4, emojis: ['✨','💫'], size: 12, speed: 40 });
+  render();
+  updateHUD();
+}
+
+function endGame() {
+  gameOver = true; running = false;
+  clearInterval(dropTimer);
+  SFX.over();
+  shake(16);
+  const ov = document.getElementById('overlay');
+  document.getElementById('final-score').textContent = '得分：' + score;
+  document.getElementById('overlay-hint').textContent =
+    score >= best && score > 0 ? '🎉 新纪录！按 回车键 再来一局' : '按 回车键 再来一局';
+  ov.classList.add('show');
+}
+
+function speed() { return Math.max(80, 800 - (level - 1) * 70); }
+function restartTimer() {
+  clearInterval(dropTimer);
+  dropTimer = setInterval(tick, speed());
+}
+
+function tick() {
+  if (!running || paused || gameOver || pendingClear || !current) return;
+  if (!collide({ ...current, r: current.r + 1 }, board)) {
+    current.r++;
+    render();
+    // 下落星尘
+    if (Math.random() < 0.5) {
+      const c = pieceCenter();
+      if (c) spawnParticles(c.x, c.y, { count: 1, emojis: ['✨','💫'], size: 9, speed: 14, kinds: ['star','emoji'], colors: ['#ffd1e3','#ffffff'] });
+    }
+  } else lock();
+}
+
+// ================= 操作 =================
+function move(dx) {
+  if (touchBoard()) return;
+  const test = { ...current, cPos: current.cPos + dx };
+  if (!collide(test, board)) {
+    current = test;
+    render();
+    const now = performance.now();
+    if (now - lastMoveSound > 45) { lastMoveSound = now; SFX.move(); }
+  }
+}
+function softDrop() {
+  if (touchBoard()) return;
+  if (!collide({ ...current, r: current.r + 1 }, board)) {
+    current.r++; score += 1; updateHUD(); render();
+    const c = pieceCenter();
+    if (c) spawnParticles(c.x, c.y, { count: 1, emojis: ['✨'], size: 11, speed: 20, kinds: ['star','emoji'] });
+  } else lock();
+}
+function hardDrop() {
+  if (touchBoard()) return;
+  const y = dropY();
+  score += (y - current.r) * 2;
+  current.r = y;
+  const c = pieceCenter();
+  if (c) spawnParticles(c.x, c.y, { count: 16, emojis: ['💖','💕','💘','💗','✨'], size: 19, speed: 95 });
+  shake(6);
+  updateHUD();
+  lock();
+}
+function doHold() {
+  if (!running || paused || gameOver || pendingClear || !canHold || !current) return;
+  const t = current.type;
+  if (holdType === null) {
+    holdType = t;
+    spawnNext();
+  } else {
+    const swap = holdType;
+    holdType = t;
+    current = spawnType(swap);
+    if (collide(current, board)) { endGame(); return; }
+  }
+  canHold = false;
+  SFX.hold();
+  const c = pieceCenter();
+  if (c) spawnParticles(c.x, c.y, { count: 8, emojis: ['💫','✨','💕'], size: 15, speed: 55 });
+  render(); updateHUD();
+}
+
+// ================= 控制 =================
+function startGame() {
+  board = emptyBoard();
+  score = 0; linesCleared = 0; level = 1;
+  love = 0; combo = 0; burstActive = false;
+  gameOver = false; paused = false; running = true; pendingClear = false; canHold = true;
+  holdType = null; queue = []; refill();
+  document.body.classList.remove('burst');
+  document.getElementById('overlay').classList.remove('show');
+  restartTimer();
+  spawnNext();
+  render(); updateHUD();
+  audioCtx();
+  const bc = burstCenter(boardEl);
+  spawnHeartRain(40);
+  spawnText(bc.x, bc.y, '开始恋爱吧 💕', '#ffd1e3', 26);
+}
+function togglePause() {
+  if (!running || gameOver || pendingClear) return;
+  paused = !paused;
+  document.getElementById('overlay-hint').textContent = paused ? '已暂停，按 P 继续' : '按 回车键 开始游戏';
+  document.getElementById('final-score').textContent = paused ? '💗 休息一下' : '';
+  document.getElementById('overlay').classList.toggle('show', paused);
+  if (!paused) audioCtx();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (!running || gameOver || paused) { startGame(); e.preventDefault(); }
+    return;
+  }
+  if (!running || gameOver) return;
+  switch (e.key) {
+    case 'ArrowLeft':  case 'a': case 'A': move(-1); break;
+    case 'ArrowRight': case 'd': case 'D': move(1);  break;
+    case 'ArrowUp':    case 'w': case 'W': tryRotate(1); render(); break;
+    case 'z': case 'Z': tryRotate(-1); render(); break;
+    case 'ArrowDown':  case 's': case 'S': softDrop(); break;
+    case ' ': hardDrop(); e.preventDefault(); break;
+    case 'c': case 'C': doHold(); break;
+    case 'p': case 'P': togglePause(); break;
+  }
+  if (['ArrowLeft','ArrowRight','ArrowDown',' '].includes(e.key)) e.preventDefault();
+});
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+
+const soundBtn = document.getElementById('sound-btn');
+soundBtn.addEventListener('click', () => {
+  soundOn = !soundOn;
+  soundBtn.textContent = soundOn ? '🔊 音乐 ON' : '🔇 音乐 OFF';
+  if (soundOn) { audioCtx(); SFX.rotate(); }
+});
+
+// 移动端按钮
+function mkBtn(txt, fn) {
+  const b = document.createElement('button');
+  b.textContent = txt;
+  b.addEventListener('click', fn);
+  return b;
+}
+const row = document.createElement('div');
+row.className = 'btn-row';
+row.append(
+  mkBtn('⟲', () => { if (running && !paused && !pendingClear) { tryRotate(-1); render(); } }),
+  mkBtn('◀', () => move(-1)),
+  mkBtn('▶', () => move(1)),
+  mkBtn('▼', softDrop),
+  mkBtn('⤓', hardDrop),
+  mkBtn('C', doHold),
+  mkBtn('⏸', togglePause),
+);
+document.body.appendChild(row);
+
+// 甜蜜值随时间缓慢回落（恋爱需要经营 💗）
+setInterval(() => {
+  if (running && !paused && !gameOver && !pendingClear && !burstActive && love > 0) {
+    love = Math.max(0, love - 0.7);
+    updateHUD();
+  }
+}, 420);
+
+// 首屏
+document.getElementById('overlay').classList.add('show');
+drawMini(nextEl, 0);
+resizeCanvas();
+addEventListener('resize', resizeCanvas);
+requestAnimationFrame(bgLoop);
+fxLoop();
+</script>
+</body>
+</html>
