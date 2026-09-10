@@ -32,7 +32,7 @@
 
 ## 🎮 在线试玩
 
-> 开启 GitHub Pages 后，点开链接即可畅玩（手机 / 电脑都行）：
+> **无需下载、无需安装**，点开链接立刻开玩（手机 / 电脑都行）：
 >
 > ### 👉 <https://daishuhe.github.io/VSCODE/tetris-sweet.html>
 
